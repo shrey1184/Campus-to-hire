@@ -126,7 +126,7 @@ export default function RoadmapPage() {
             </div>
             <div className="h-2.5 rounded-full bg-muted">
               <div
-                className="h-2.5 rounded-full bg-gradient-to-r from-primary to-green-500 transition-all"
+                className="h-2.5 rounded-full bg-gradient-to-r from-primary to-purple-500 transition-all"
                 style={{
                   width: `${((roadmap.current_week - 1) / roadmap.total_weeks) * 100}%`,
                 }}
@@ -225,9 +225,9 @@ export default function RoadmapPage() {
                                     task.type === "learn"
                                       ? "bg-primary/20 text-primary"
                                       : task.type === "practice"
-                                      ? "bg-emerald-500/15 text-emerald-300"
+                                      ? "bg-purple-500/15 text-purple-300"
                                       : task.type === "interview"
-                                      ? "bg-green-500/15 text-green-300"
+                                      ? "bg-violet-500/15 text-violet-300"
                                       : "bg-secondary text-secondary-foreground"
                                   }`}>
                                     {task.type}

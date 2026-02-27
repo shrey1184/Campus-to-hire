@@ -61,9 +61,9 @@ export default function JDAnalyzePage() {
 
   const priorityColors: Record<string, string> = {
     critical: "text-primary bg-primary/20",
-    high: "text-emerald-300 bg-emerald-500/15",
-    medium: "text-lime-300 bg-lime-500/15",
-    low: "text-green-300 bg-green-500/10",
+    high: "text-purple-300 bg-purple-500/15",
+    medium: "text-fuchsia-300 bg-fuchsia-500/15",
+    low: "text-violet-300 bg-violet-500/10",
   };
 
   return (

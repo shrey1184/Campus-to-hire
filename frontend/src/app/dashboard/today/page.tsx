@@ -131,8 +131,8 @@ export default function TodayPage() {
           <div
             className={`h-3 rounded-full transition-all ${
               allDone
-                ? "bg-gradient-to-r from-primary to-emerald-400"
-                : "bg-gradient-to-r from-primary to-green-500"
+                ? "bg-gradient-to-r from-primary to-violet-400"
+                : "bg-gradient-to-r from-primary to-purple-500"
             }`}
             style={{ width: `${pct}%` }}
           />

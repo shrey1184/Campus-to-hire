@@ -185,7 +185,7 @@ export default function OnboardingPage() {
                       onClick={() => updateField("college_tier", t.value)}
                       className={`rounded-lg border px-3 py-2 text-left text-xs transition ${
                         form.college_tier === t.value
-                          ? "border-primary bg-primary/10 text-primary shadow-[0_0_16px_var(--neon-green-glow)]"
+                          ? "border-primary bg-primary/10 text-primary shadow-[0_0_16px_var(--neon-pink-glow)]"
                           : "border-border hover:border-primary/30 hover:bg-accent/60"
                       }`}
                     >
@@ -242,7 +242,7 @@ export default function OnboardingPage() {
                         onClick={() => updateField("is_cs_background", v)}
                         className={`flex-1 rounded-lg border px-3 py-2 text-sm transition ${
                           form.is_cs_background === v
-                            ? "border-primary bg-primary/10 text-primary shadow-[0_0_16px_var(--neon-green-glow)]"
+                            ? "border-primary bg-primary/10 text-primary shadow-[0_0_16px_var(--neon-pink-glow)]"
                             : "border-border hover:border-primary/30 hover:bg-accent/60"
                         }`}
                       >
@@ -270,7 +270,7 @@ export default function OnboardingPage() {
                         onClick={() => setSkillLevel(skill.id, level)}
                         className={`h-8 w-8 rounded-md text-xs font-bold transition ${
                           (form.skills[skill.id]?.level ?? 0) >= level
-                            ? "bg-primary text-primary-foreground shadow-[0_0_14px_var(--neon-green-glow)]"
+                            ? "bg-primary text-primary-foreground shadow-[0_0_14px_var(--neon-pink-glow)]"
                             : "bg-muted text-muted-foreground hover:bg-accent"
                         }`}
                       >
@@ -294,7 +294,7 @@ export default function OnboardingPage() {
                       onClick={() => updateField("target_role", r.value)}
                       className={`rounded-lg border px-3 py-2.5 text-left text-sm transition ${
                         form.target_role === r.value
-                          ? "border-primary bg-primary/10 text-primary font-medium shadow-[0_0_16px_var(--neon-green-glow)]"
+                          ? "border-primary bg-primary/10 text-primary font-medium shadow-[0_0_16px_var(--neon-pink-glow)]"
                           : "border-border hover:border-primary/30 hover:bg-accent/60"
                       }`}
                     >
@@ -315,7 +315,7 @@ export default function OnboardingPage() {
                       onClick={() => toggleCompany(c)}
                       className={`rounded-full border px-3 py-1 text-xs transition ${
                         form.target_companies.includes(c)
-                          ? "border-primary bg-primary/10 text-primary font-medium shadow-[0_0_16px_var(--neon-green-glow)]"
+                          ? "border-primary bg-primary/10 text-primary font-medium shadow-[0_0_16px_var(--neon-pink-glow)]"
                           : "border-border hover:border-primary/30 hover:bg-accent/60"
                       }`}
                     >
@@ -372,7 +372,7 @@ export default function OnboardingPage() {
                       onClick={() => updateField("preferred_language", l.value)}
                       className={`rounded-lg border px-3 py-2 text-sm transition ${
                         form.preferred_language === l.value
-                          ? "border-primary bg-primary/10 text-primary font-medium shadow-[0_0_16px_var(--neon-green-glow)]"
+                          ? "border-primary bg-primary/10 text-primary font-medium shadow-[0_0_16px_var(--neon-pink-glow)]"
                           : "border-border hover:border-primary/30 hover:bg-accent/60"
                       }`}
                     >

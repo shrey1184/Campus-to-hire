@@ -135,7 +135,7 @@ export default function LandingPage() {
               key={f.title}
               className="group rounded-2xl p-5 sm:p-6 cyber-panel cyber-panel-hover"
             >
-              <div className="mb-4 inline-flex rounded-xl border border-primary/25 bg-primary/10 p-3 text-primary shadow-[0_0_20px_var(--neon-green-glow)]">
+              <div className="mb-4 inline-flex rounded-xl border border-primary/25 bg-primary/10 p-3 text-primary shadow-[0_0_20px_var(--neon-pink-glow)]">
                 <f.icon className="h-6 w-6" />
               </div>
               <h3 className="mb-2 text-base font-semibold sm:text-lg">{f.title}</h3>
