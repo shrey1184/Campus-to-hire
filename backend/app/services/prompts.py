@@ -188,7 +188,7 @@ def get_roadmap_prompt(user_profile: dict) -> str:
     skills_str = ", ".join(skills.keys()) if isinstance(skills, dict) and skills else "beginner level"
 
     # College tier specific guidance
-    tier_guidance = {
+    tier_guidance_map = {
         "tier1": """
 - Tier 1 colleges: Focus on product companies (Google, Microsoft, Amazon, Flipkart)
 - Emphasize: DSA, system design, competitive programming
@@ -208,7 +208,8 @@ def get_roadmap_prompt(user_profile: dict) -> str:
 - Strategy: Clear service company tests first, then prepare for off-campus product roles
 - Include: Heavy focus on aptitude, basic programming, CS fundamentals, spoken English
 - Special focus: Off-campus application strategies, LinkedIn networking, skill showcase"""
-    }.get(college_tier, tier_guidance["tier2"])
+    }
+    tier_guidance = tier_guidance_map.get(college_tier, tier_guidance_map["tier2"])
 
     # Language preference note
     language_note = ""
