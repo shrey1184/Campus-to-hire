@@ -237,10 +237,10 @@ export const TARGET_COMPANIES = [
 ] as const;
 
 export const TASK_TYPE_COLORS: Record<string, string> = {
-  learn: "bg-primary/20 text-primary",
-  practice: "bg-purple-500/15 text-purple-300",
-  review: "bg-fuchsia-500/15 text-fuchsia-300",
-  interview: "bg-violet-500/15 text-violet-300",
-  project: "bg-pink-500/15 text-pink-300",
+  learn: "bg-primary/15 text-primary",
+  practice: "bg-amber-500/10 text-amber-300",
+  review: "bg-yellow-500/10 text-yellow-300",
+  interview: "bg-orange-500/10 text-orange-300",
+  project: "bg-rose-500/10 text-rose-300",
   quiz: "bg-secondary text-secondary-foreground",
 };

@@ -84,17 +84,17 @@ export default function InterviewPage() {
     return (
       <div className="space-y-6 animate-fade-in">
         <div>
-          <h1 className="cyber-heading-lg font-bold flex items-center gap-2">
+          <h1 className="heading-lg font-bold flex items-center gap-2">
             <MessageSquare className="h-6 w-6 text-primary" />
             Mock Interview
           </h1>
-          <p className="mt-1 text-muted-foreground cyber-copy">
+          <p className="mt-1 text-muted-foreground body-text">
             Practice with an AI interviewer tailored to your target role
           </p>
         </div>
 
-        <div className="mx-auto max-w-lg rounded-2xl p-5 sm:p-6 cyber-panel">
-          <h2 className="mb-4 cyber-heading-md font-semibold">Setup Your Interview</h2>
+        <div className="mx-auto max-w-lg rounded-2xl p-5 sm:p-6 card-dark">
+          <h2 className="mb-4 heading-md font-semibold">Setup Your Interview</h2>
 
           <div className="space-y-4">
             <div>
@@ -102,7 +102,7 @@ export default function InterviewPage() {
               <select
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value)}
-                className="w-full rounded-lg px-4 py-2.5 text-sm outline-none cyber-input"
+                className="w-full rounded-lg px-4 py-2.5 text-sm outline-none input-dark"
               >
                 {TARGET_ROLES.map((r) => (
                   <option key={r.value} value={r.value}>{r.label}</option>
@@ -117,7 +117,7 @@ export default function InterviewPage() {
               <select
                 value={selectedCompany}
                 onChange={(e) => setSelectedCompany(e.target.value)}
-                className="w-full rounded-lg px-4 py-2.5 text-sm outline-none cyber-input"
+                className="w-full rounded-lg px-4 py-2.5 text-sm outline-none input-dark"
               >
                 <option value="">General Interview</option>
                 {TARGET_COMPANIES.map((c) => (
@@ -129,10 +129,10 @@ export default function InterviewPage() {
             <button
               onClick={handleStart}
               disabled={starting}
-              className="flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold disabled:opacity-60 cyber-button"
+              className="flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold disabled:opacity-60 btn-accent"
             >
               {starting ? (
-                <Loader2 className="h-4 w-4 animate-spin cyber-spinner" />
+                <Loader2 className="h-4 w-4 animate-spin spinner-glow" />
               ) : (
                 <>
                   <Play className="h-4 w-4" />
@@ -167,15 +167,15 @@ export default function InterviewPage() {
             <button
               onClick={handleEnd}
               disabled={ending}
-              className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground cyber-button-secondary"
+              className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground btn-outline"
             >
-              {ending ? <Loader2 className="h-3 w-3 animate-spin cyber-spinner" /> : <StopCircle className="h-3 w-3" />}
+              {ending ? <Loader2 className="h-3 w-3 animate-spin spinner-glow" /> : <StopCircle className="h-3 w-3" />}
               End
             </button>
           )}
           <button
             onClick={handleNewInterview}
-            className="rounded-lg px-3 py-1.5 text-xs font-medium cyber-button-secondary"
+            className="rounded-lg px-3 py-1.5 text-xs font-medium btn-outline"
           >
             New Interview
           </button>
@@ -224,7 +224,7 @@ export default function InterviewPage() {
 
         {/* Score card */}
         {isFinished && (
-          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 text-center cyber-panel-soft">
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 text-center card-glass">
             <Trophy className="mx-auto mb-2 h-10 w-10 text-primary" />
             <p className="text-2xl font-bold">{interview.score}/100</p>
             <div className="mx-auto mb-3 flex justify-center gap-1">
@@ -261,15 +261,15 @@ export default function InterviewPage() {
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
             placeholder="Type your answer..."
             disabled={loading}
-            className="flex-1 rounded-lg px-4 py-2.5 text-sm outline-none disabled:opacity-50 cyber-input"
+            className="flex-1 rounded-lg px-4 py-2.5 text-sm outline-none disabled:opacity-50 input-dark"
           />
           <button
             onClick={handleSend}
             disabled={loading || !message.trim()}
-            className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50 cyber-button"
+            className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50 btn-accent"
           >
             {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin cyber-spinner" />
+              <Loader2 className="h-4 w-4 animate-spin spinner-glow" />
             ) : (
               <Send className="h-4 w-4" />
             )}

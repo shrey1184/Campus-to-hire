@@ -56,9 +56,9 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="rounded-xl px-8 py-6 text-center cyber-panel-soft cyber-loading-panel">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary cyber-spinner" />
-          <p className="mt-3 cyber-micro text-muted-foreground">Syncing your dashboard...</p>
+        <div className="rounded-xl px-8 py-6 text-center card-glass pulse-card">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary spinner-glow" />
+          <p className="mt-3 text-micro text-muted-foreground">Syncing your dashboard...</p>
         </div>
       </div>
     );
@@ -71,10 +71,10 @@ export default function DashboardPage() {
     <div className="space-y-6 animate-fade-in">
       {/* Greeting */}
       <div>
-        <h1 className="cyber-heading-lg font-bold">
+        <h1 className="heading-lg font-bold">
           Welcome back, {user?.name?.split(" ")[0]}
         </h1>
-        <p className="mt-1 max-w-2xl text-muted-foreground cyber-copy">
+        <p className="mt-1 max-w-2xl text-muted-foreground body-text">
           {user?.target_role
             ? `Preparing for ${user.target_role.replace(/_/g, " ").toUpperCase()} roles`
             : "Let's continue your preparation journey"}
@@ -120,16 +120,16 @@ export default function DashboardPage() {
       {/* Main content */}
       <div className="grid gap-5 lg:grid-cols-3">
         {/* Today's plan summary */}
-        <div className="lg:col-span-2 rounded-2xl p-5 sm:p-6 cyber-panel">
+        <div className="lg:col-span-2 rounded-2xl p-5 sm:p-6 card-dark">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="cyber-heading-md font-semibold flex items-center gap-2">
+            <h2 className="heading-md font-semibold flex items-center gap-2">
               <CalendarCheck className="h-5 w-5 text-primary" />
               Today&apos;s Plan
             </h2>
             {todayPlan && (
               <Link
                 href="/dashboard/today"
-                className="cyber-link flex items-center gap-1 text-sm"
+                className="link-glow flex items-center gap-1 text-sm"
               >
                 View All <ArrowRight className="h-3 w-3" />
               </Link>
@@ -191,7 +191,7 @@ export default function DashboardPage() {
               Loading your daily plan...
             </p>
           ) : (
-            <div className="rounded-lg p-8 text-center cyber-panel-soft">
+            <div className="rounded-lg p-8 text-center card-glass">
               <Map className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
               <p className="mb-2 font-medium">No Roadmap Yet</p>
               <p className="mb-4 text-sm text-muted-foreground">
@@ -199,7 +199,7 @@ export default function DashboardPage() {
               </p>
               <Link
                 href="/dashboard/roadmap"
-                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium cyber-button"
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium btn-accent"
               >
                 Generate Roadmap <ArrowRight className="h-3 w-3" />
               </Link>
@@ -209,7 +209,7 @@ export default function DashboardPage() {
 
         {/* Quick actions */}
         <div className="space-y-4">
-          <h2 className="cyber-heading-md font-semibold">Quick Actions</h2>
+          <h2 className="heading-md font-semibold">Quick Actions</h2>
 
           <QuickAction
             href="/dashboard/roadmap"
@@ -242,7 +242,7 @@ export default function DashboardPage() {
 
           {/* Skill snapshot */}
           {stats?.skill_levels && Object.keys(stats.skill_levels).length > 0 && (
-            <div className="rounded-xl p-4 cyber-panel">
+            <div className="rounded-xl p-4 card-dark">
               <h3 className="mb-3 text-sm font-semibold flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-primary" />
                 Skill Levels
@@ -285,7 +285,7 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="rounded-xl p-4 cyber-panel">
+    <div className="rounded-xl p-4 card-dark">
       <div className={`mb-2 ${color}`}>{icon}</div>
       <p className="text-xl font-bold sm:text-2xl">{value}</p>
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
@@ -310,7 +310,7 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 rounded-xl p-4 transition cyber-panel cyber-panel-hover"
+      className="flex items-center gap-3 rounded-xl p-4 transition card-dark card-interactive"
     >
       <div className={`rounded-lg p-2.5 ${color}`}>{icon}</div>
       <div className="min-w-0">

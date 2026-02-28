@@ -103,7 +103,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8 sm:py-12 cyber-page">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8 sm:py-12 page-base">
       <div className="w-full max-w-md">
         {/* Logo */}
         <Link href="/" className="mb-8 flex items-center justify-center gap-2">
@@ -112,18 +112,18 @@ export default function LoginPage() {
         </Link>
 
         {/* Card */}
-        <div className="rounded-2xl p-6 sm:p-8 cyber-panel">
+        <div className="rounded-2xl p-6 sm:p-8 card-dark">
           <h1 className="mb-2 text-center text-2xl font-bold sm:text-3xl">
             {isLogin ? "Welcome Back" : "Create Account"}
           </h1>
-          <p className="mb-6 text-center text-muted-foreground cyber-copy">
+          <p className="mb-6 text-center text-muted-foreground body-text">
             {isLogin
               ? "Sign in to continue your preparation journey"
               : "Start your personalized placement prep"}
           </p>
 
           {error && (
-            <div className="mb-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive border border-primary/30">
+            <div className="mb-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive border border-destructive/30">
               {error}
             </div>
           )}
@@ -139,7 +139,7 @@ export default function LoginPage() {
                     placeholder="Your full name"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full rounded-lg py-2.5 pr-4 pl-10 text-[15px] outline-none transition cyber-input"
+                    className="w-full rounded-lg py-2.5 pr-4 pl-10 text-[15px] outline-none transition input-dark"
                     required
                   />
                 </div>
@@ -155,7 +155,7 @@ export default function LoginPage() {
                   placeholder="you@college.edu"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full rounded-lg py-2.5 pr-4 pl-10 text-[15px] outline-none transition cyber-input"
+                  className="w-full rounded-lg py-2.5 pr-4 pl-10 text-[15px] outline-none transition input-dark"
                   required
                 />
               </div>
@@ -170,7 +170,7 @@ export default function LoginPage() {
                   placeholder="********"
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  className="w-full rounded-lg py-2.5 pr-4 pl-10 text-[15px] outline-none transition cyber-input"
+                  className="w-full rounded-lg py-2.5 pr-4 pl-10 text-[15px] outline-none transition input-dark"
                   required
                 />
               </div>
@@ -179,10 +179,10 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold tracking-wide disabled:opacity-60 cyber-button"
+              className="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold tracking-wide disabled:opacity-60 btn-accent"
             >
               {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin cyber-spinner" />
+                <Loader2 className="h-4 w-4 animate-spin spinner-glow" />
               ) : (
                 <>
                   {isLogin ? "Sign In" : "Create Account"}
@@ -201,7 +201,7 @@ export default function LoginPage() {
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="flex w-full items-center justify-center gap-3 rounded-lg py-2.5 text-sm font-medium disabled:opacity-60 cyber-button-secondary"
+            className="flex w-full items-center justify-center gap-3 rounded-lg py-2.5 text-sm font-medium disabled:opacity-60 btn-outline"
           >
             <GoogleIcon />
             Continue with Google
@@ -210,7 +210,7 @@ export default function LoginPage() {
           <button
             onClick={handleDemoLogin}
             disabled={loading}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium disabled:opacity-60 cyber-button-secondary"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium disabled:opacity-60 btn-outline"
           >
             <Sparkles className="h-4 w-4" />
             Try Demo Account
@@ -223,7 +223,7 @@ export default function LoginPage() {
                 setIsLogin(!isLogin);
                 setError("");
               }}
-              className="cyber-link font-medium"
+              className="link-glow font-medium"
             >
               {isLogin ? "Sign up" : "Sign in"}
             </button>

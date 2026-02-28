@@ -63,9 +63,9 @@ export default function TodayPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="rounded-xl px-8 py-6 text-center cyber-panel-soft cyber-loading-panel">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary cyber-spinner" />
-          <p className="mt-3 cyber-micro text-muted-foreground">Preparing today&apos;s tasks...</p>
+        <div className="rounded-xl px-8 py-6 text-center card-glass pulse-card">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary spinner-glow" />
+          <p className="mt-3 text-micro text-muted-foreground">Preparing today&apos;s tasks...</p>
         </div>
       </div>
     );
@@ -93,26 +93,26 @@ export default function TodayPage() {
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="cyber-heading-lg font-bold flex items-center gap-2">
+        <h1 className="heading-lg font-bold flex items-center gap-2">
           <CalendarCheck className="h-6 w-6 text-primary" />
           Today&apos;s Plan
         </h1>
-        <p className="mt-1 text-muted-foreground cyber-copy">
+        <p className="mt-1 text-muted-foreground body-text">
           Week {plan.week}, Day {plan.day}
         </p>
       </div>
 
       {/* Summary */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        <div className="rounded-xl p-4 text-center cyber-panel">
+        <div className="rounded-xl p-4 text-center card-dark">
           <p className="text-xl font-bold text-primary sm:text-2xl">{completed}/{total}</p>
           <p className="text-xs text-muted-foreground">Tasks Done</p>
         </div>
-        <div className="rounded-xl p-4 text-center cyber-panel">
+        <div className="rounded-xl p-4 text-center card-dark">
           <p className="text-xl font-bold sm:text-2xl">{pct}%</p>
           <p className="text-xs text-muted-foreground">Complete</p>
         </div>
-        <div className="rounded-xl p-4 text-center cyber-panel">
+        <div className="rounded-xl p-4 text-center card-dark">
           <p className="flex items-center justify-center gap-1 text-xl font-bold sm:text-2xl">
             <Clock className="h-4 w-4" />
             {Math.round(totalMinutes / 60 * 10) / 10}h
@@ -122,7 +122,7 @@ export default function TodayPage() {
       </div>
 
       {/* Progress bar */}
-      <div className="rounded-xl p-4 cyber-panel">
+      <div className="rounded-xl p-4 card-dark">
         <div className="mb-2 flex items-center justify-between text-sm">
           <span className="font-medium">Daily Progress</span>
           <span className="text-muted-foreground tabular-nums">{pct}%</span>
@@ -131,8 +131,8 @@ export default function TodayPage() {
           <div
             className={`h-3 rounded-full transition-all ${
               allDone
-                ? "bg-gradient-to-r from-primary to-violet-400"
-                : "bg-gradient-to-r from-primary to-purple-500"
+                ? "bg-gradient-to-r from-primary to-amber-500"
+                : "bg-gradient-to-r from-primary to-amber-600"
             }`}
             style={{ width: `${pct}%` }}
           />
@@ -141,7 +141,7 @@ export default function TodayPage() {
 
       {/* All done banner */}
       {allDone && (
-        <div className="flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 p-4 cyber-panel-soft">
+        <div className="flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 p-4 card-glass">
           <Trophy className="h-8 w-8 text-primary" />
           <div>
             <p className="font-semibold text-primary">
@@ -161,8 +161,8 @@ export default function TodayPage() {
             key={task.id}
             className={`flex items-start gap-3 sm:gap-4 rounded-xl border p-3.5 sm:p-4 transition ${
               task.completed
-                ? "border-primary/40 bg-primary/10 cyber-panel-soft"
-                : "border-border/50 bg-card hover:border-primary/30 cyber-panel cyber-panel-hover"
+                ? "border-primary/40 bg-primary/10 card-glass"
+                : "border-border/50 bg-card hover:border-primary/30 card-dark card-interactive"
             }`}
           >
             {/* Toggle */}
@@ -172,7 +172,7 @@ export default function TodayPage() {
               className="mt-0.5 flex-shrink-0"
             >
               {toggling === task.id ? (
-                <Loader2 className="h-5 w-5 animate-spin text-primary cyber-spinner" />
+                <Loader2 className="h-5 w-5 animate-spin text-primary spinner-glow" />
               ) : task.completed ? (
                 <CheckCircle2 className="h-5 w-5 text-primary" />
               ) : (
@@ -205,7 +205,7 @@ export default function TodayPage() {
                       href={r.url || "#"}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="cyber-link text-xs"
+                      className="link-glow text-xs"
                     >
                       Resource: {r.title}
                     </a>

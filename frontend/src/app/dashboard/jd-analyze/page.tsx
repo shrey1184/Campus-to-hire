@@ -61,30 +61,30 @@ export default function JDAnalyzePage() {
 
   const priorityColors: Record<string, string> = {
     critical: "text-primary bg-primary/20",
-    high: "text-purple-300 bg-purple-500/15",
-    medium: "text-fuchsia-300 bg-fuchsia-500/15",
-    low: "text-violet-300 bg-violet-500/10",
+    high: "text-amber-300 bg-amber-500/10",
+    medium: "text-yellow-300 bg-yellow-500/10",
+    low: "text-orange-300 bg-amber-500/10",
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="cyber-heading-lg font-bold flex items-center gap-2">
+        <h1 className="heading-lg font-bold flex items-center gap-2">
           <FileSearch className="h-6 w-6 text-primary" />
           JD Skill-Gap Analysis
         </h1>
-        <p className="mt-1 text-muted-foreground cyber-copy">
+        <p className="mt-1 text-muted-foreground body-text">
           Paste a job description to see how your skills match up
         </p>
       </div>
 
       {/* Input */}
-      <div className="rounded-2xl p-5 sm:p-6 cyber-panel">
+      <div className="rounded-2xl p-5 sm:p-6 card-dark">
         <div className="mb-3 flex items-center justify-between">
           <label className="text-sm font-semibold">Job Description</label>
           <button
             onClick={useSample}
-            className="cyber-link flex items-center gap-1 text-xs"
+            className="link-glow flex items-center gap-1 text-xs"
           >
             <Clipboard className="h-3 w-3" />
             Use Sample JD
@@ -95,16 +95,16 @@ export default function JDAnalyzePage() {
           onChange={(e) => setJdText(e.target.value)}
           placeholder="Paste the full job description here..."
           rows={10}
-          className="w-full rounded-lg px-4 py-3 text-sm outline-none resize-none cyber-input"
+          className="w-full rounded-lg px-4 py-3 text-sm outline-none resize-none input-dark"
         />
         <button
           onClick={handleAnalyze}
           disabled={loading || !jdText.trim()}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold disabled:opacity-50 cyber-button"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold disabled:opacity-50 btn-accent"
         >
           {loading ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin cyber-spinner" />
+              <Loader2 className="h-4 w-4 animate-spin spinner-glow" />
               Analyzing with AI...
             </>
           ) : (
@@ -117,7 +117,7 @@ export default function JDAnalyzePage() {
       </div>
 
       {error && (
-        <div className="rounded-lg bg-destructive/10 p-4 text-sm text-destructive flex items-center gap-2 border border-primary/30">
+        <div className="rounded-lg bg-destructive/10 p-4 text-sm text-destructive flex items-center gap-2 border border-destructive/30">
           <AlertTriangle className="h-4 w-4" />
           {error}
         </div>
@@ -127,8 +127,8 @@ export default function JDAnalyzePage() {
       {analysis && (
         <div className="space-y-6 animate-fade-in">
           {/* Summary */}
-          <div className="rounded-2xl p-5 sm:p-6 cyber-panel">
-            <h2 className="mb-4 cyber-heading-md font-semibold">Analysis Summary</h2>
+          <div className="rounded-2xl p-5 sm:p-6 card-dark">
+            <h2 className="mb-4 heading-md font-semibold">Analysis Summary</h2>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <div>
                 <p className="text-xs text-muted-foreground">Role</p>
@@ -148,8 +148,8 @@ export default function JDAnalyzePage() {
           </div>
 
           {/* Required Skills */}
-          <div className="rounded-2xl p-5 sm:p-6 cyber-panel">
-            <h2 className="mb-4 cyber-heading-md font-semibold">Required Skills</h2>
+          <div className="rounded-2xl p-5 sm:p-6 card-dark">
+            <h2 className="mb-4 heading-md font-semibold">Required Skills</h2>
             <div className="space-y-2">
               {analysis.required_skills.map((skill, i) => (
                 <div
@@ -176,8 +176,8 @@ export default function JDAnalyzePage() {
 
           {/* Gap Analysis */}
           {analysis.gap_analysis.length > 0 && (
-            <div className="rounded-2xl p-5 sm:p-6 cyber-panel">
-              <h2 className="mb-4 cyber-heading-md font-semibold flex items-center gap-2">
+            <div className="rounded-2xl p-5 sm:p-6 card-dark">
+              <h2 className="mb-4 heading-md font-semibold flex items-center gap-2">
                 <ArrowUpCircle className="h-5 w-5 text-primary" />
                 Skill Gaps
               </h2>
@@ -208,8 +208,8 @@ export default function JDAnalyzePage() {
 
           {/* Recommendations */}
           {analysis.recommendations.length > 0 && (
-            <div className="rounded-2xl p-5 sm:p-6 cyber-panel">
-              <h2 className="mb-4 cyber-heading-md font-semibold flex items-center gap-2">
+            <div className="rounded-2xl p-5 sm:p-6 card-dark">
+              <h2 className="mb-4 heading-md font-semibold flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-primary" />
                 Recommendations
               </h2>

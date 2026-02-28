@@ -47,9 +47,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   if (loading || shouldRedirectToOnboarding) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="rounded-xl px-8 py-6 text-center cyber-panel-soft cyber-loading-panel">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary cyber-spinner" />
-          <p className="mt-3 cyber-micro text-muted-foreground">
+        <div className="rounded-xl px-8 py-6 text-center card-glass pulse-card">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary spinner-glow" />
+          <p className="mt-3 text-micro text-muted-foreground">
             {loading ? "Initializing workspace..." : "Redirecting to onboarding..."}
           </p>
         </div>
@@ -60,9 +60,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   if (!user) return null;
 
   return (
-    <div className="flex min-h-screen bg-background cyber-page">
+    <div className="flex min-h-screen bg-background page-base">
       {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-border/40 bg-card lg:block cyber-panel-soft">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-border/40 bg-card lg:block card-glass">
         <div className="flex h-full flex-col">
           {/* Logo */}
           <div className="flex h-16 items-center gap-2 border-b border-border/40 px-6">
@@ -78,9 +78,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium cyber-nav-item ${
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium nav-link ${
                     isActive
-                      ? "cyber-nav-item-active text-primary"
+                      ? "nav-active text-primary"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground"
                   }`}
                 >
@@ -104,7 +104,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </div>
             <button
               onClick={logout}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground cyber-button-secondary"
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground btn-outline"
             >
               <LogOut className="h-4 w-4" />
               Sign out
@@ -114,7 +114,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Mobile header */}
-      <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b border-border/40 bg-card px-4 lg:hidden cyber-panel-soft">
+      <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b border-border/40 bg-card px-4 lg:hidden card-glass">
         <Link href="/dashboard" className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-primary" />
           <span className="text-sm font-bold">Campus-to-Hire</span>
@@ -125,7 +125,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border/40 bg-card lg:hidden cyber-panel-soft">
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border/40 bg-card lg:hidden card-glass">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href;
           return (

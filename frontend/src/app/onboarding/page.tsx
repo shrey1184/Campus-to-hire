@@ -115,7 +115,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-8 cyber-page">
+    <div className="min-h-screen bg-background px-4 py-8 page-base">
       <div className="mx-auto max-w-3xl">
         {/* Header */}
         <div className="mb-8 text-center">
@@ -123,8 +123,8 @@ export default function OnboardingPage() {
             <Sparkles className="h-6 w-6" />
             <span className="text-lg font-bold">Campus-to-Hire</span>
           </div>
-          <h1 className="cyber-heading-lg font-bold">Set Up Your Profile</h1>
-          <p className="mt-1 text-muted-foreground cyber-copy">
+          <h1 className="heading-lg font-bold">Set Up Your Profile</h1>
+          <p className="mt-1 text-muted-foreground body-text">
             Complete in under 10 minutes. This helps us personalize your roadmap.
           </p>
         </div>
@@ -157,12 +157,12 @@ export default function OnboardingPage() {
 
         {/* Step title */}
         <div className="mb-6 text-center">
-          <h2 className="cyber-heading-md font-semibold">{STEPS[step].title}</h2>
-          <p className="cyber-copy text-muted-foreground">{STEPS[step].description}</p>
+          <h2 className="heading-md font-semibold">{STEPS[step].title}</h2>
+          <p className="body-text text-muted-foreground">{STEPS[step].description}</p>
         </div>
 
         {/* Step Content */}
-        <div className="rounded-2xl p-5 sm:p-7 animate-fade-in cyber-panel">
+        <div className="rounded-2xl p-5 sm:p-7 animate-fade-in card-dark">
           {step === 0 && (
             <div className="space-y-4">
               <div>
@@ -172,7 +172,7 @@ export default function OnboardingPage() {
                   placeholder="e.g. IIT Delhi, VJTI Mumbai"
                   value={form.college}
                   onChange={(e) => updateField("college", e.target.value)}
-                  className="w-full rounded-lg px-4 py-2.5 text-sm outline-none cyber-input"
+                  className="w-full rounded-lg px-4 py-2.5 text-sm outline-none input-dark"
                 />
               </div>
 
@@ -185,7 +185,7 @@ export default function OnboardingPage() {
                       onClick={() => updateField("college_tier", t.value)}
                       className={`rounded-lg border px-3 py-2 text-left text-xs transition ${
                         form.college_tier === t.value
-                          ? "border-primary bg-primary/10 text-primary shadow-[0_0_16px_var(--neon-pink-glow)]"
+                          ? "border-primary bg-primary/10 text-primary shadow-[0_0_16px_var(--accent-glow)]"
                           : "border-border hover:border-primary/30 hover:bg-accent/60"
                       }`}
                     >
@@ -201,7 +201,7 @@ export default function OnboardingPage() {
                   <select
                     value={form.degree}
                     onChange={(e) => updateField("degree", e.target.value)}
-                    className="w-full rounded-lg px-4 py-2.5 text-sm outline-none cyber-input"
+                    className="w-full rounded-lg px-4 py-2.5 text-sm outline-none input-dark"
                   >
                     {DEGREES.map((d) => (
                       <option key={d} value={d}>{d}</option>
@@ -215,7 +215,7 @@ export default function OnboardingPage() {
                     placeholder="e.g. Computer Science"
                     value={form.major}
                     onChange={(e) => updateField("major", e.target.value)}
-                    className="w-full rounded-lg px-4 py-2.5 text-sm outline-none cyber-input"
+                    className="w-full rounded-lg px-4 py-2.5 text-sm outline-none input-dark"
                   />
                 </div>
               </div>
@@ -226,7 +226,7 @@ export default function OnboardingPage() {
                   <select
                     value={form.current_year}
                     onChange={(e) => updateField("current_year", parseInt(e.target.value))}
-                    className="w-full rounded-lg px-4 py-2.5 text-sm outline-none cyber-input"
+                    className="w-full rounded-lg px-4 py-2.5 text-sm outline-none input-dark"
                   >
                     {[1, 2, 3, 4].map((y) => (
                       <option key={y} value={y}>Year {y}</option>
@@ -242,7 +242,7 @@ export default function OnboardingPage() {
                         onClick={() => updateField("is_cs_background", v)}
                         className={`flex-1 rounded-lg border px-3 py-2 text-sm transition ${
                           form.is_cs_background === v
-                            ? "border-primary bg-primary/10 text-primary shadow-[0_0_16px_var(--neon-pink-glow)]"
+                            ? "border-primary bg-primary/10 text-primary shadow-[0_0_16px_var(--accent-glow)]"
                             : "border-border hover:border-primary/30 hover:bg-accent/60"
                         }`}
                       >
@@ -270,7 +270,7 @@ export default function OnboardingPage() {
                         onClick={() => setSkillLevel(skill.id, level)}
                         className={`h-8 w-8 rounded-md text-xs font-bold transition ${
                           (form.skills[skill.id]?.level ?? 0) >= level
-                            ? "bg-primary text-primary-foreground shadow-[0_0_14px_var(--neon-pink-glow)]"
+                            ? "bg-primary text-primary-foreground shadow-[0_0_14px_var(--accent-glow)]"
                             : "bg-muted text-muted-foreground hover:bg-accent"
                         }`}
                       >
@@ -294,7 +294,7 @@ export default function OnboardingPage() {
                       onClick={() => updateField("target_role", r.value)}
                       className={`rounded-lg border px-3 py-2.5 text-left text-sm transition ${
                         form.target_role === r.value
-                          ? "border-primary bg-primary/10 text-primary font-medium shadow-[0_0_16px_var(--neon-pink-glow)]"
+                          ? "border-primary bg-primary/10 text-primary font-medium shadow-[0_0_16px_var(--accent-glow)]"
                           : "border-border hover:border-primary/30 hover:bg-accent/60"
                       }`}
                     >
@@ -315,7 +315,7 @@ export default function OnboardingPage() {
                       onClick={() => toggleCompany(c)}
                       className={`rounded-full border px-3 py-1 text-xs transition ${
                         form.target_companies.includes(c)
-                          ? "border-primary bg-primary/10 text-primary font-medium shadow-[0_0_16px_var(--neon-pink-glow)]"
+                          ? "border-primary bg-primary/10 text-primary font-medium shadow-[0_0_16px_var(--accent-glow)]"
                           : "border-border hover:border-primary/30 hover:bg-accent/60"
                       }`}
                     >
@@ -372,7 +372,7 @@ export default function OnboardingPage() {
                       onClick={() => updateField("preferred_language", l.value)}
                       className={`rounded-lg border px-3 py-2 text-sm transition ${
                         form.preferred_language === l.value
-                          ? "border-primary bg-primary/10 text-primary font-medium shadow-[0_0_16px_var(--neon-pink-glow)]"
+                          ? "border-primary bg-primary/10 text-primary font-medium shadow-[0_0_16px_var(--accent-glow)]"
                           : "border-border hover:border-primary/30 hover:bg-accent/60"
                       }`}
                     >
@@ -382,9 +382,9 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
-              <div className="rounded-lg p-4 text-sm cyber-panel-soft">
+              <div className="rounded-lg p-4 text-sm card-glass">
                 <p className="font-medium">Your weekly commitment:</p>
-                <p className="text-muted-foreground cyber-copy">
+                <p className="text-muted-foreground body-text">
                   {form.hours_per_day * form.days_per_week} hours/week (~{" "}
                   {Math.round((form.hours_per_day * form.days_per_week * 4) / 10) * 10} hours/month
                   )
@@ -399,7 +399,7 @@ export default function OnboardingPage() {
           <button
             onClick={() => setStep(Math.max(0, step - 1))}
             disabled={step === 0}
-            className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground disabled:opacity-40 cyber-button-secondary"
+            className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground disabled:opacity-40 btn-outline"
           >
             <ArrowLeft className="h-4 w-4" /> Back
           </button>
@@ -408,7 +408,7 @@ export default function OnboardingPage() {
             <button
               onClick={() => setStep(step + 1)}
               disabled={!canNext()}
-              className="flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-semibold disabled:opacity-40 cyber-button"
+              className="flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-semibold disabled:opacity-40 btn-accent"
             >
               Next <ArrowRight className="h-4 w-4" />
             </button>
@@ -416,10 +416,10 @@ export default function OnboardingPage() {
             <button
               onClick={handleComplete}
               disabled={loading}
-              className="flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-semibold disabled:opacity-60 cyber-button"
+              className="flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-semibold disabled:opacity-60 btn-accent"
             >
               {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin cyber-spinner" />
+                <Loader2 className="h-4 w-4 animate-spin spinner-glow" />
               ) : (
                 <>
                   Complete Setup <Check className="h-4 w-4" />
