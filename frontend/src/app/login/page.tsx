@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { authApi } from "@/lib/api";
 import { Sparkles, Mail, Lock, User, ArrowRight, Loader2 } from "lucide-react";
+import Logo from "@/components/Logo";
 import Link from "next/link";
 
 // Google icon SVG component
@@ -106,10 +107,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8 sm:py-12 page-base">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <Link href="/" className="mb-8 flex items-center justify-center gap-2">
-          <Sparkles className="h-8 w-8 text-primary" />
-          <span className="text-xl font-bold sm:text-2xl">Campus-to-Hire</span>
-        </Link>
+        <div className="mb-8 flex justify-center">
+          <Logo size="lg" linked />
+        </div>
 
         {/* Card */}
         <div className="rounded-2xl p-6 sm:p-8 card-dark">

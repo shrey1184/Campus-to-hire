@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import Logo from "@/components/Logo";
 import {
   GraduationCap,
   Target,
@@ -10,7 +11,6 @@ import {
   FileSearch,
   Globe,
   ArrowRight,
-  Sparkles,
   LogIn,
   Heart,
   Bookmark,
@@ -71,10 +71,7 @@ export default function LandingPage() {
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-border/40 bg-background/90 backdrop-blur-lg">
         <div className="container-main flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2.5">
-            <Sparkles className="h-6 w-6 text-primary" />
-            <span className="text-lg font-bold tracking-tight">Campus-to-Hire</span>
-          </div>
+          <Logo size="md" />
           <div className="flex items-center gap-3">
             {!loading && (
               user ? (
@@ -311,9 +308,8 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border/40 px-4 py-8 sm:px-6 lg:px-8">
         <div className="container-main flex flex-col items-center justify-between gap-3 sm:flex-row">
-          <div className="flex items-center gap-2 text-sm text-secondary-foreground">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="font-medium">Campus-to-Hire</span>
+          <div className="flex items-center gap-3 text-sm text-secondary-foreground">
+            <Logo size="sm" />
             <span className="text-muted-foreground">© 2026</span>
           </div>
           <div className="text-sm text-muted-foreground">

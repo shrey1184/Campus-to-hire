@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, type ReactNode } from "react";
 import {
-  Sparkles,
   LayoutDashboard,
   Map,
   CalendarCheck,
@@ -15,6 +14,7 @@ import {
   User,
   Loader2,
 } from "lucide-react";
+import Logo from "@/components/Logo";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -65,9 +65,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-border/40 bg-card lg:block card-glass">
         <div className="flex h-full flex-col">
           {/* Logo */}
-          <div className="flex h-16 items-center gap-2 border-b border-border/40 px-6">
-            <Sparkles className="h-6 w-6 text-primary" />
-            <span className="font-bold">Campus-to-Hire</span>
+          <div className="flex h-16 items-center border-b border-border/40 px-6">
+            <Logo size="md" />
           </div>
 
           {/* Nav */}
@@ -115,9 +114,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile header */}
       <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b border-border/40 bg-card px-4 lg:hidden card-glass">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <span className="text-sm font-bold">Campus-to-Hire</span>
+        <Link href="/dashboard">
+          <Logo size="sm" />
         </Link>
         <Link href="/dashboard" className="rounded-full bg-primary/10 p-2 text-primary">
           <User className="h-4 w-4" />

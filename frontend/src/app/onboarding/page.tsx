@@ -13,7 +13,6 @@ import {
 } from "@/types";
 import type { UserProfileUpdate } from "@/types";
 import {
-  Sparkles,
   GraduationCap,
   Target,
   Clock,
@@ -22,6 +21,7 @@ import {
   Check,
   Loader2,
 } from "lucide-react";
+import Logo from "@/components/Logo";
 
 const STEPS = [
   { title: "Background", icon: GraduationCap, description: "Tell us about your education" },
@@ -119,9 +119,8 @@ export default function OnboardingPage() {
       <div className="mx-auto max-w-3xl">
         {/* Header */}
         <div className="mb-8 text-center">
-          <div className="mb-4 inline-flex items-center gap-2 text-primary">
-            <Sparkles className="h-6 w-6" />
-            <span className="text-lg font-bold">Campus-to-Hire</span>
+          <div className="mb-4 flex justify-center">
+            <Logo size="md" linked />
           </div>
           <h1 className="heading-lg font-bold">Set Up Your Profile</h1>
           <p className="mt-1 text-muted-foreground body-text">
