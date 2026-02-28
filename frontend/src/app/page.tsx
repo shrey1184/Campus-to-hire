@@ -107,8 +107,20 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="relative px-4 pt-8 pb-10 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-5xl">
+      <section className="relative flex flex-col justify-center min-h-[calc(100vh-64px)] px-4 py-6 sm:px-6">
+        {/* Grid background */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+            maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%)",
+            WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%)",
+          }}
+        />
+        <div className="mx-auto w-full max-w-7xl">
           {/* ── Main Hero Card ── */}
           <div className="relative overflow-hidden rounded-3xl bg-[#0a0a0a] border border-[#1f1f1f] p-6 sm:p-8 shadow-2xl">
 
