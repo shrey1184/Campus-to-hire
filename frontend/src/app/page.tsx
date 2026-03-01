@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import Logo from "@/components/Logo";
 import {
@@ -65,6 +66,8 @@ const steps = [
 
 export default function LandingPage() {
   const { user, loading } = useAuth();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   return (
     <div className="min-h-screen bg-background page-base">
@@ -73,7 +76,7 @@ export default function LandingPage() {
         <div className="container-main flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
           <Logo size="md" />
           <div className="flex items-center gap-3">
-            {!loading && (
+            {mounted && !loading && (
               user ? (
                 <Link
                   href="/dashboard"
