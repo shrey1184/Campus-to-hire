@@ -12,6 +12,7 @@ from app.services.prompts import (
     INTERVIEW_SYSTEM_PROMPT,
     get_interview_start_prompt,
     get_interview_evaluate_prompt,
+    get_interview_followup_prompt,
 )
 
 router = APIRouter(prefix="/api/interview", tags=["interview"])
@@ -113,9 +114,21 @@ def respond_to_interview(
         return interview
 
     # Otherwise ask the next interview question.
-    ai_response = bedrock_service.invoke_model_with_history(
+    # NOTE: We use invoke_model (not invoke_model_with_history) because:
+    # - The Converse API requires the first message to be from "user";
+    #   our stored messages start with the assistant's opening question.
+    # - get_interview_followup_prompt embeds the recent context in the prompt,
+    #   giving the model everything it needs without the ordering constraint.
+    last_answer = body.message
+    ai_response = bedrock_service.invoke_model(
         INTERVIEW_SYSTEM_PROMPT,
-        messages,
+        get_interview_followup_prompt(
+            interview.role,
+            interview.company,
+            last_answer,
+            messages,
+        ),
+        temperature=0.8,
         fallback_type="interview",
     )
 

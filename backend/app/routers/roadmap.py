@@ -1,14 +1,21 @@
+import copy
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, attributes
 
 from app.database import get_db
 from app.auth import get_current_user
 from app.models import User, Roadmap
-from app.schemas import RoadmapResponse, RoadmapListResponse
+from app.schemas import RoadmapResponse, RoadmapListResponse, GenerateWeekRequest
 from app.services.bedrock import bedrock_service
-from app.services.prompts import ROADMAP_SYSTEM_PROMPT, get_roadmap_prompt
+from app.services.prompts import (
+    ROADMAP_SYSTEM_PROMPT,
+    ROADMAP_WEEK_SYSTEM_PROMPT,
+    get_roadmap_prompt,
+    get_roadmap_plan_prompt,
+    get_roadmap_week_prompt,
+)
 
 router = APIRouter(prefix="/api/roadmap", tags=["roadmap"])
 
@@ -210,9 +217,11 @@ def generate_roadmap(
         "current_year": current_user.current_year,
     }
 
+    # Step 1: Generate the plan skeleton + detailed Week 1
     raw_response = bedrock_service.invoke_model(
         ROADMAP_SYSTEM_PROMPT,
-        get_roadmap_prompt(user_profile),
+        get_roadmap_plan_prompt(user_profile),
+        max_tokens=4096,
         fallback_type="roadmap",
     )
     parsed_json = bedrock_service.parse_json_response_safe(
@@ -220,12 +229,44 @@ def generate_roadmap(
         fallback={
             "title": "Personalized Learning Roadmap",
             "total_weeks": 8,
-            "weeks": [],
+            "plan": [],
+            "week_1": {},
             "fallback": True,
             "message": "Generated fallback roadmap due to AI response parsing issues.",
         },
     )
-    normalized_content = _normalize_roadmap_content(parsed_json, current_user.days_per_week)
+
+    plan = parsed_json.get("plan", [])
+    week_1_data = parsed_json.get("week_1", {})
+    total_weeks = _to_positive_int(parsed_json.get("total_weeks"), 8)
+    title = str(parsed_json.get("title") or "Personalized Learning Roadmap").strip()
+
+    # Build weeks array: Week 1 is detailed, rest are skeleton placeholders
+    weeks = []
+    normalized_week_1 = _normalize_week(week_1_data, 1, current_user.days_per_week)
+    weeks.append(normalized_week_1)
+
+    for i in range(2, total_weeks + 1):
+        # Find theme from plan
+        plan_entry = next((p for p in plan if isinstance(p, dict) and p.get("week") == i), {})
+        theme = str(plan_entry.get("theme") or f"Week {i}").strip()
+        focus = str(plan_entry.get("focus") or "").strip()
+        weeks.append({
+            "week": i,
+            "title": theme,
+            "description": focus,
+            "days": [],  # Empty — will be filled by generate-week calls
+            "pending": True,  # Marker for frontend to know this week needs generation
+        })
+
+    normalized_content = {
+        "title": title or "Personalized Learning Roadmap",
+        "total_weeks": total_weeks,
+        "weeks": weeks,
+        "plan": plan,  # Store plan for use in subsequent generate-week calls
+        "fallback": bool(parsed_json.get("fallback", False)),
+        "message": str(parsed_json.get("message") or ""),
+    }
 
     # Deactivate existing active roadmaps
     db.query(Roadmap).filter(
@@ -236,10 +277,93 @@ def generate_roadmap(
     roadmap = Roadmap(
         user_id=current_user.id,
         content=normalized_content,
-        total_weeks=normalized_content.get("total_weeks", 8),
+        total_weeks=total_weeks,
         is_active=True,
     )
     db.add(roadmap)
+    db.commit()
+    db.refresh(roadmap)
+    return roadmap
+
+
+@router.post("/{roadmap_id}/generate-week", response_model=RoadmapResponse)
+def generate_week(
+    roadmap_id: str,
+    body: GenerateWeekRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate detailed content for a single week of an existing roadmap."""
+    roadmap = (
+        db.query(Roadmap)
+        .filter(Roadmap.id == roadmap_id, Roadmap.user_id == current_user.id)
+        .first()
+    )
+    if roadmap is None:
+        raise HTTPException(status_code=404, detail="Roadmap not found")
+
+    content = roadmap.content or {}
+    weeks = content.get("weeks", [])
+    plan = content.get("plan", [])
+    total_weeks = content.get("total_weeks", len(weeks))
+    week_number = body.week_number
+
+    if week_number < 1 or week_number > total_weeks:
+        raise HTTPException(status_code=400, detail=f"Week number must be between 1 and {total_weeks}")
+
+    # Check if this week already has content (non-empty days and no pending flag)
+    week_index = week_number - 1
+    if week_index < len(weeks):
+        existing = weeks[week_index]
+        if isinstance(existing, dict) and existing.get("days") and not existing.get("pending"):
+            raise HTTPException(status_code=400, detail=f"Week {week_number} already has content")
+
+    # Build user profile for the prompt
+    user_profile = {
+        "college_tier": current_user.college_tier,
+        "is_cs_background": current_user.is_cs_background,
+        "target_role": current_user.target_role,
+        "target_companies": current_user.target_companies,
+        "hours_per_day": current_user.hours_per_day,
+        "days_per_week": current_user.days_per_week,
+        "preferred_language": getattr(current_user, "preferred_language", "en"),
+    }
+
+    # Collect themes of already-generated weeks for context
+    previous_themes = []
+    for w in weeks[:week_index]:
+        if isinstance(w, dict) and w.get("days") and not w.get("pending"):
+            previous_themes.append(str(w.get("title") or w.get("theme") or f"Week {w.get('week', '?')}"))
+
+    raw_response = bedrock_service.invoke_model(
+        ROADMAP_WEEK_SYSTEM_PROMPT,
+        get_roadmap_week_prompt(user_profile, week_number, plan, previous_themes or None),
+        max_tokens=4096,
+        fallback_type="roadmap_week",
+    )
+    parsed_week = bedrock_service.parse_json_response_safe(
+        raw_response,
+        fallback={"week": week_number, "theme": f"Week {week_number}", "days": []},
+    )
+
+    # Normalize the generated week
+    normalized_week = _normalize_week(parsed_week, week_number, current_user.days_per_week)
+
+    # Update the roadmap content — use deepcopy + flag_modified for SQLAlchemy
+    updated_content = copy.deepcopy(content)
+    updated_weeks = updated_content.get("weeks", [])
+
+    # Ensure weeks array is long enough
+    while len(updated_weeks) <= week_index:
+        updated_weeks.append({"week": len(updated_weeks) + 1, "title": f"Week {len(updated_weeks) + 1}", "days": [], "pending": True})
+
+    # Replace the week — remove the pending flag
+    normalized_week.pop("pending", None)
+    updated_weeks[week_index] = normalized_week
+    updated_content["weeks"] = updated_weeks
+
+    roadmap.content = updated_content
+    attributes.flag_modified(roadmap, "content")
     db.commit()
     db.refresh(roadmap)
     return roadmap

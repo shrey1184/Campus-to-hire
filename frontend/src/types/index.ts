@@ -75,6 +75,7 @@ export interface RoadmapWeek {
   title: string;
   description?: string;
   days: RoadmapDay[];
+  pending?: boolean;
 }
 
 export interface RoadmapDay {

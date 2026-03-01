@@ -183,6 +183,7 @@ class BedrockService:
     ) -> str:
         """
         Invoke Bedrock model with retry logic and fallback handling.
+        Uses the Converse API for model-agnostic compatibility.
         
         Args:
             system_prompt: System context/persona
@@ -203,14 +204,6 @@ class BedrockService:
             logger.error(f"Invalid prompt inputs: {error_msg}")
             raise HTTPException(status_code=400, detail=error_msg)
         
-        body = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-            "system": system_prompt,
-            "messages": [{"role": "user", "content": user_prompt}],
-        }
-        
         last_error = None
         error_type = None
         
@@ -218,15 +211,19 @@ class BedrockService:
             try:
                 logger.debug(f"Invoking Bedrock model (attempt {attempt + 1}/{self.MAX_RETRIES})")
                 
-                response = self._client.invoke_model(
+                response = self._client.converse(
                     modelId=self._model_id,
-                    contentType="application/json",
-                    accept="application/json",
-                    body=json.dumps(body),
+                    messages=[
+                        {"role": "user", "content": [{"text": user_prompt}]}
+                    ],
+                    system=[{"text": system_prompt}],
+                    inferenceConfig={
+                        "maxTokens": max_tokens,
+                        "temperature": temperature,
+                    },
                 )
                 
-                response_body = json.loads(response["body"].read())
-                content = response_body["content"][0]["text"]
+                content = response["output"]["message"]["content"][0]["text"]
                 
                 logger.info(f"Bedrock invocation successful on attempt {attempt + 1}")
                 return content
@@ -258,7 +255,10 @@ class BedrockService:
         }
         
         if fallback_type in self.FALLBACK_RESPONSES:
-            logger.warning(f"Returning fallback response for {fallback_type}")
+            logger.warning(
+                f"Returning fallback response for {fallback_type}. "
+                f"Last error ({error_type}): {last_error}"
+            )
             return self._get_fallback_response(fallback_type, error_info)
         
         # If no fallback defined, raise the error
@@ -266,6 +266,25 @@ class BedrockService:
             status_code=503,
             detail=f"Bedrock service unavailable after {self.MAX_RETRIES} attempts: {last_error}",
         ) from last_error
+    
+    def _convert_messages_to_converse_format(self, messages: list[dict]) -> list[dict]:
+        """
+        Convert messages from simple format to Converse API format.
+        
+        Simple format:  {"role": "user", "content": "Hello"}
+        Converse format: {"role": "user", "content": [{"text": "Hello"}]}
+        """
+        converted = []
+        for msg in messages:
+            content = msg.get("content", "")
+            if isinstance(content, str):
+                converted.append({"role": msg["role"], "content": [{"text": content}]})
+            elif isinstance(content, list) and content and isinstance(content[0], dict) and "text" in content[0]:
+                # Already in Converse format
+                converted.append(msg)
+            else:
+                converted.append({"role": msg["role"], "content": [{"text": str(content)}]})
+        return converted
     
     def invoke_model_with_history(
         self,
@@ -277,6 +296,7 @@ class BedrockService:
     ) -> str:
         """
         Invoke Bedrock model with conversation history and retry logic.
+        Uses the Converse API for model-agnostic compatibility.
         
         Args:
             system_prompt: System context/persona
@@ -292,13 +312,8 @@ class BedrockService:
         if not messages or not isinstance(messages, list):
             raise HTTPException(status_code=400, detail="Messages must be a non-empty list")
         
-        body = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-            "system": system_prompt,
-            "messages": messages,
-        }
+        # Convert messages to Converse API format
+        converse_messages = self._convert_messages_to_converse_format(messages)
         
         last_error = None
         error_type = None
@@ -307,15 +322,17 @@ class BedrockService:
             try:
                 logger.debug(f"Invoking Bedrock with history (attempt {attempt + 1}/{self.MAX_RETRIES})")
                 
-                response = self._client.invoke_model(
+                response = self._client.converse(
                     modelId=self._model_id,
-                    contentType="application/json",
-                    accept="application/json",
-                    body=json.dumps(body),
+                    messages=converse_messages,
+                    system=[{"text": system_prompt}],
+                    inferenceConfig={
+                        "maxTokens": max_tokens,
+                        "temperature": temperature,
+                    },
                 )
                 
-                response_body = json.loads(response["body"].read())
-                content = response_body["content"][0]["text"]
+                content = response["output"]["message"]["content"][0]["text"]
                 
                 logger.info(f"Bedrock invocation with history successful on attempt {attempt + 1}")
                 return content
@@ -339,7 +356,10 @@ class BedrockService:
         }
         
         if fallback_type in self.FALLBACK_RESPONSES:
-            logger.warning(f"Returning fallback response for {fallback_type}")
+            logger.warning(
+                f"Returning fallback response for {fallback_type}. "
+                f"Last error ({error_type}): {last_error}"
+            )
             return self._get_fallback_response(fallback_type, error_info)
         
         raise HTTPException(
@@ -356,6 +376,7 @@ class BedrockService:
     ) -> AsyncGenerator[str, None]:
         """
         Generate a streaming response from the model.
+        Uses the Converse Stream API for model-agnostic compatibility.
         
         Args:
             system_prompt: System context/persona
@@ -366,32 +387,26 @@ class BedrockService:
         Yields:
             Chunks of the response as they're generated
         """
-        body = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-            "system": system_prompt,
-            "messages": [{"role": "user", "content": user_prompt}],
-        }
-        
         try:
-            response = self._client.invoke_model_with_response_stream(
+            response = self._client.converse_stream(
                 modelId=self._model_id,
-                contentType="application/json",
-                accept="application/json",
-                body=json.dumps(body),
+                messages=[
+                    {"role": "user", "content": [{"text": user_prompt}]}
+                ],
+                system=[{"text": system_prompt}],
+                inferenceConfig={
+                    "maxTokens": max_tokens,
+                    "temperature": temperature,
+                },
             )
             
-            # Process the streaming response
-            for event in response["body"]:
-                chunk = json.loads(event["chunk"]["bytes"])
-                
-                if chunk.get("type") == "content_block_delta":
-                    delta = chunk.get("delta", {})
+            # Process the streaming response (Converse Stream API format)
+            for event in response["stream"]:
+                if "contentBlockDelta" in event:
+                    delta = event["contentBlockDelta"].get("delta", {})
                     if "text" in delta:
                         yield delta["text"]
-                        
-                elif chunk.get("type") == "message_stop":
+                elif "messageStop" in event:
                     break
                     
         except Exception as exc:
@@ -460,6 +475,68 @@ class BedrockService:
         # Try parsing the entire response
         return json.loads(response)
     
+    @staticmethod
+    def _repair_truncated_json(text: str) -> str | None:
+        """
+        Repair a JSON string that was truncated mid-generation by Nova.
+        Records every position after a complete value was closed (}/ ]) and
+        tries to reconstruct valid JSON from the most recent such position.
+        """
+        text = text.strip()
+        if not text:
+            return None
+
+        # Find where JSON starts
+        start = next((i for i, c in enumerate(text) if c in ('{', '[')), None)
+        if start is None:
+            return None
+        text = text[start:]
+
+        # Walk forward tracking state.
+        # At every position AFTER a closing `}` or `]` (while NOT in a string),
+        # record: (char_index_exclusive, open_bracket_stack_snapshot)
+        # These are "cut points" — places we can legally truncate.
+        in_string = False
+        escape_next = False
+        stack: list[str] = []   # open bracket stack
+
+        # cut_points: list of (end_index, stack_snapshot)
+        # stack_snapshot is what `stack` looks like AFTER processing index i
+        cut_points: list[tuple[int, list[str]]] = []
+
+        for i, ch in enumerate(text):
+            if escape_next:
+                escape_next = False
+                continue
+            if ch == '\\' and in_string:
+                escape_next = True
+                continue
+            if ch == '"':
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+
+            if ch in ('{', '['):
+                stack.append(ch)
+            elif ch in ('}', ']'):
+                if stack:
+                    stack.pop()
+                # Record a valid cut point after this closing bracket
+                cut_points.append((i + 1, list(stack)))
+
+        # Try cut points from most recent to oldest
+        for end_idx, remaining_stack in reversed(cut_points):
+            closing = ''.join('}' if c == '{' else ']' for c in reversed(remaining_stack))
+            candidate = text[:end_idx] + closing
+            try:
+                json.loads(candidate)
+                return candidate
+            except json.JSONDecodeError:
+                continue
+
+        return None
+
     def parse_json_response_safe(
         self,
         response: str,
@@ -467,6 +544,7 @@ class BedrockService:
     ) -> dict:
         """
         Safely parse JSON response with fallback.
+        Attempts truncation repair before giving up.
         
         Args:
             response: Raw model response
@@ -479,6 +557,18 @@ class BedrockService:
             return self.parse_json_response(response)
         except json.JSONDecodeError as exc:
             logger.warning(f"Failed to parse JSON response: {exc}")
+
+            # Attempt to repair truncated JSON before falling back
+            repaired = self._repair_truncated_json(response)
+            if repaired:
+                try:
+                    parsed = json.loads(repaired)
+                    logger.info("Successfully recovered truncated JSON response")
+                    return parsed
+                except json.JSONDecodeError:
+                    pass
+
+            logger.error("JSON repair failed — using fallback")
             return fallback or {
                 "error": "Failed to parse response",
                 "raw_response": response[:500] if response else None,
@@ -505,14 +595,14 @@ class BedrockService:
         if not user_prompt or not isinstance(user_prompt, str) or not user_prompt.strip():
             return False, "User prompt cannot be empty"
         
-        if len(user_prompt) > 100000:  # ~25k tokens limit (rough estimate)
-            return False, "User prompt too long (max ~25k tokens). Please shorten your request."
+        if len(user_prompt) > 200000:  # ~50k tokens limit (rough estimate)
+            return False, "User prompt too long. Please shorten your request."
         
-        if system_prompt and len(system_prompt) > 10000:
-            return False, "System prompt too long (max ~2.5k tokens)"
+        if system_prompt and len(system_prompt) > 50000:
+            return False, "System prompt too long"
         
-        if max_tokens < 1 or max_tokens > 4096:
-            return False, "max_tokens must be between 1 and 4096"
+        if max_tokens < 1 or max_tokens > 5120:
+            return False, "max_tokens must be between 1 and 5120"
         
         return True, ""
     
@@ -524,17 +614,16 @@ class BedrockService:
             Health status dictionary
         """
         try:
-            # Simple invocation to check connectivity
-            response = self._client.invoke_model(
+            # Simple invocation to check connectivity using Converse API
+            response = self._client.converse(
                 modelId=self._model_id,
-                contentType="application/json",
-                accept="application/json",
-                body=json.dumps({
-                    "anthropic_version": "bedrock-2023-05-31",
-                    "max_tokens": 10,
+                messages=[
+                    {"role": "user", "content": [{"text": "Hi"}]}
+                ],
+                inferenceConfig={
+                    "maxTokens": 10,
                     "temperature": 0.0,
-                    "messages": [{"role": "user", "content": "Hi"}],
-                }),
+                },
             )
             return {
                 "status": "healthy",

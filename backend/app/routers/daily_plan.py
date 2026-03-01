@@ -1,7 +1,9 @@
+import copy
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.database import get_db
 from app.auth import get_current_user
@@ -143,7 +145,7 @@ def complete_task(
     if plan is None:
         raise HTTPException(status_code=404, detail="No daily plan found for today.")
 
-    tasks: list[dict] = list(plan.tasks)
+    tasks: list[dict] = copy.deepcopy(plan.tasks)
     task_found = False
     for task in tasks:
         if task.get("id") == body.task_id:
@@ -157,8 +159,11 @@ def complete_task(
             detail=f"Task '{body.task_id}' not found in today's plan.",
         )
 
-    # Reassign so SQLAlchemy detects the mutation on the JSON column.
+    # Reassign and explicitly flag the JSON column dirty so SQLAlchemy always
+    # issues an UPDATE (plain reassignment can be a no-op when the in-memory
+    # dicts were mutated before the column was set).
     plan.tasks = tasks
+    flag_modified(plan, "tasks")
 
     all_complete = all(t.get("completed", False) for t in tasks)
     if all_complete:

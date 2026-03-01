@@ -135,6 +135,12 @@ export const roadmapApi = {
   generate: () =>
     request<Roadmap>("/api/roadmap/generate", { method: "POST" }),
 
+  generateWeek: (roadmapId: string, weekNumber: number) =>
+    request<Roadmap>(`/api/roadmap/${roadmapId}/generate-week`, {
+      method: "POST",
+      body: JSON.stringify({ week_number: weekNumber }),
+    }),
+
   getActive: () => request<Roadmap>("/api/roadmap"),
 
   getById: (id: string) => request<Roadmap>(`/api/roadmap/${id}`),

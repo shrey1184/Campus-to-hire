@@ -31,6 +31,8 @@ export default function RoadmapPage() {
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [generatingWeek, setGeneratingWeek] = useState<number | null>(null);
+  const [totalWeeksToGen, setTotalWeeksToGen] = useState(0);
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [error, setError] = useState("");
 
@@ -52,15 +54,42 @@ export default function RoadmapPage() {
 
   async function handleGenerate() {
     setGenerating(true);
+    setGeneratingWeek(null);
+    setTotalWeeksToGen(0);
     setError("");
     try {
+      // Step 1: Generate plan + Week 1
       const rm = await roadmapApi.generate();
       setRoadmap(rm);
       setExpandedWeek(0);
+
+      // Step 2: Generate remaining weeks sequentially
+      const pendingWeeks = rm.content.weeks
+        .filter((w) => w.pending || (!w.days?.length))
+        .map((w) => w.week);
+
+      if (pendingWeeks.length > 0) {
+        setTotalWeeksToGen(pendingWeeks.length);
+        let latestRm = rm;
+        for (const weekNum of pendingWeeks) {
+          setGeneratingWeek(weekNum);
+          try {
+            latestRm = await roadmapApi.generateWeek(rm.id, weekNum);
+            setRoadmap(latestRm);
+          } catch (weekErr) {
+            console.error(`Failed to generate week ${weekNum}:`, weekErr);
+            // Continue with remaining weeks even if one fails
+          }
+        }
+        setGeneratingWeek(null);
+        setTotalWeeksToGen(0);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate roadmap");
     } finally {
       setGenerating(false);
+      setGeneratingWeek(null);
+      setTotalWeeksToGen(0);
     }
   }
 
@@ -95,7 +124,9 @@ export default function RoadmapPage() {
           {generating ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin spinner-glow" />
-              Generating...
+              {generatingWeek
+                ? `Generating Week ${generatingWeek}...`
+                : "Creating Plan..."}
             </>
           ) : (
             <>
@@ -109,6 +140,29 @@ export default function RoadmapPage() {
       {error && (
         <div className="rounded-lg bg-destructive/10 p-4 text-sm text-destructive">
           {error}
+        </div>
+      )}
+
+      {/* Generation progress */}
+      {generating && generatingWeek && totalWeeksToGen > 0 && roadmap && (
+        <div className="rounded-xl p-4 card-dark">
+          <div className="mb-2 flex items-center justify-between text-sm">
+            <span className="font-medium flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-primary spinner-glow" />
+              Generating Week {generatingWeek} of {roadmap.total_weeks}
+            </span>
+            <span className="text-muted-foreground tabular-nums">
+              {Math.round(((generatingWeek - 1) / roadmap.total_weeks) * 100)}%
+            </span>
+          </div>
+          <div className="h-2.5 rounded-full bg-muted">
+            <div
+              className="h-2.5 rounded-full bg-gradient-to-r from-primary to-amber-600 transition-all duration-500"
+              style={{
+                width: `${((generatingWeek - 1) / roadmap.total_weeks) * 100}%`,
+              }}
+            />
+          </div>
         </div>
       )}
 
@@ -140,6 +194,8 @@ export default function RoadmapPage() {
               const isExpanded = expandedWeek === index;
               const isCurrent = index === roadmap.current_week - 1;
               const isPast = index < roadmap.current_week - 1;
+              const isPending = week.pending || !week.days?.length;
+              const isGeneratingThis = generatingWeek === week.week;
 
               return (
                 <div
@@ -149,12 +205,15 @@ export default function RoadmapPage() {
                       ? "border-primary/50 bg-primary/10 card-glass"
                       : isPast
                       ? "border-primary/30 bg-primary/5 card-glass"
+                      : isPending
+                      ? "border-border/30 bg-card/50 card-dark opacity-75"
                       : "border-border/50 bg-card card-dark"
                   }`}
                 >
                   <button
-                    onClick={() => setExpandedWeek(isExpanded ? null : index)}
-                    className="flex w-full items-center gap-3 p-3.5 sm:p-4 text-left"
+                    onClick={() => !isPending && setExpandedWeek(isExpanded ? null : index)}
+                    disabled={isPending}
+                    className="flex w-full items-center gap-3 p-3.5 sm:p-4 text-left disabled:cursor-default"
                   >
                     <div
                       className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
@@ -162,10 +221,18 @@ export default function RoadmapPage() {
                           ? "bg-primary text-primary-foreground"
                           : isCurrent
                           ? "bg-primary text-primary-foreground"
+                          : isPending
+                          ? "bg-muted/50 text-muted-foreground"
                           : "bg-muted text-muted-foreground"
                       }`}
                     >
-                      {isPast ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
+                      {isGeneratingThis ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : isPast ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        index + 1
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm sm:text-[15px]">
@@ -174,6 +241,16 @@ export default function RoadmapPage() {
                       {week.description && (
                         <p className="text-xs text-muted-foreground truncate">
                           {week.description}
+                        </p>
+                      )}
+                      {isPending && !isGeneratingThis && (
+                        <p className="text-xs text-muted-foreground/60 italic">
+                          Waiting to generate...
+                        </p>
+                      )}
+                      {isGeneratingThis && (
+                        <p className="text-xs text-primary/80 italic">
+                          Generating tasks...
                         </p>
                       )}
                     </div>
@@ -189,7 +266,7 @@ export default function RoadmapPage() {
                     )}
                   </button>
 
-                  {isExpanded && week.days && (
+                  {isExpanded && !isPending && week.days && (
                     <div className="border-t border-border/30 px-4 pb-4">
                       {week.days.map((day, dayIndex) => (
                         <div key={dayIndex} className="mt-4">

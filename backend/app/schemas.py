@@ -115,6 +115,10 @@ class RoadmapListResponse(BaseModel):
     total: int
 
 
+class GenerateWeekRequest(BaseModel):
+    week_number: int
+
+
 # ── Daily Plan ────────────────────────────────────────────────────────────
 
 class DailyPlanResponse(BaseModel):

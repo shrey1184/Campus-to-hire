@@ -21,12 +21,12 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
 
     # AWS
-    AWS_REGION: str = "ap-south-1"
+    AWS_REGION: str = "us-east-1"
     AWS_ACCESS_KEY_ID: str
     AWS_SECRET_ACCESS_KEY: str
 
     # Amazon Bedrock
-    BEDROCK_MODEL_ID: str = "anthropic.claude-3-haiku-20240307-v1:0"
+    BEDROCK_MODEL_ID: str = "amazon.nova-lite-v1:0"
 
     # CORS
     CORS_ORIGINS: list[str] | str = ["http://localhost:3000"]
