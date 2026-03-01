@@ -166,6 +166,9 @@ export const dailyPlanApi = {
       body: JSON.stringify({ task_id: taskId, completed }),
     }),
 
+  nextDay: () =>
+    request<DailyPlan>("/api/daily-plan/next", { method: "POST" }),
+
   getHistory: () => request<DailyPlan[]>("/api/daily-plan/history"),
 };
 

@@ -96,6 +96,43 @@ def _advance_roadmap(roadmap: Roadmap) -> None:
     # If already on the last day of the last week, leave the pointer in place.
 
 
+def _sync_tasks_to_roadmap(
+    roadmap: Roadmap,
+    week: int,
+    day: int,
+    tasks: list[dict],
+    db: Session,
+) -> None:
+    """Write task completion flags back into the roadmap's content JSON.
+
+    This keeps the roadmap page in sync with the daily-plan page so that
+    completed tasks show as completed everywhere.
+    """
+    try:
+        week_index = week - 1
+        day_index = day - 1
+        content = copy.deepcopy(roadmap.content)
+        roadmap_tasks = content["weeks"][week_index]["days"][day_index]["tasks"]
+    except (KeyError, IndexError, TypeError):
+        return  # Nothing to sync — silently skip
+
+    # Build a lookup from task id → completed
+    completion_map = {t["id"]: t.get("completed", False) for t in tasks if "id" in t}
+
+    changed = False
+    for rt in roadmap_tasks:
+        tid = rt.get("id")
+        if tid and tid in completion_map:
+            new_val = completion_map[tid]
+            if rt.get("completed") != new_val:
+                rt["completed"] = new_val
+                changed = True
+
+    if changed:
+        roadmap.content = content
+        flag_modified(roadmap, "content")
+
+
 @router.get("", response_model=DailyPlanResponse)
 def get_today_plan(
     current_user: User = Depends(get_current_user),
@@ -122,6 +159,11 @@ def get_today_plan(
         tasks=tasks,
     )
     db.add(plan)
+
+    # Sync the stable UUIDs we just assigned back into the roadmap content
+    # so that the roadmap page and daily-plan page always reference the same IDs.
+    _sync_tasks_to_roadmap(roadmap, roadmap.current_week, roadmap.current_day, tasks, db)
+
     db.commit()
     db.refresh(plan)
 
@@ -165,14 +207,69 @@ def complete_task(
     plan.tasks = tasks
     flag_modified(plan, "tasks")
 
-    all_complete = all(t.get("completed", False) for t in tasks)
-    if all_complete:
-        _advance_roadmap(roadmap)
+    # ── Sync completion state back into the roadmap content JSON ──
+    _sync_tasks_to_roadmap(roadmap, plan.week, plan.day, tasks, db)
 
     db.commit()
     db.refresh(plan)
 
     return plan
+
+
+@router.post("/next", response_model=DailyPlanResponse)
+def advance_to_next_day(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> DailyPlan:
+    """Advance the roadmap pointer to the next day and return a new plan.
+
+    Only allowed when all tasks in the current day's plan are completed.
+    If the next day's content doesn't exist (pending week), raises 422.
+    """
+    roadmap = _get_active_roadmap(current_user, db)
+
+    plan = _get_today_plan(roadmap, db)
+    if plan is not None:
+        all_complete = all(t.get("completed", False) for t in plan.tasks)
+        if not all_complete:
+            raise HTTPException(
+                status_code=400,
+                detail="Complete all tasks before advancing to the next day.",
+            )
+
+    # Advance the roadmap pointer
+    old_week, old_day = roadmap.current_week, roadmap.current_day
+    _advance_roadmap(roadmap)
+
+    # Check if pointer actually moved (could be at the end of roadmap)
+    if roadmap.current_week == old_week and roadmap.current_day == old_day:
+        raise HTTPException(
+            status_code=400,
+            detail="You have reached the end of the roadmap.",
+        )
+
+    # Try to create a plan for the new day
+    existing = _get_today_plan(roadmap, db)
+    if existing is not None:
+        db.commit()
+        return existing
+
+    tasks = _derive_tasks_from_roadmap(roadmap)
+
+    new_plan = DailyPlan(
+        roadmap_id=roadmap.id,
+        user_id=current_user.id,
+        week=roadmap.current_week,
+        day=roadmap.current_day,
+        tasks=tasks,
+    )
+    db.add(new_plan)
+    _sync_tasks_to_roadmap(roadmap, roadmap.current_week, roadmap.current_day, tasks, db)
+
+    db.commit()
+    db.refresh(new_plan)
+
+    return new_plan
 
 
 @router.get("/history", response_model=list[DailyPlanResponse])

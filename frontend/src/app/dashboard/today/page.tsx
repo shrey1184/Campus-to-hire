@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Zap,
   Trophy,
+  ArrowRight,
 } from "lucide-react";
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -31,6 +32,7 @@ export default function TodayPage() {
   const [plan, setPlan] = useState<DailyPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [advancing, setAdvancing] = useState(false);
 
   const loadPlan = useCallback(async () => {
     try {
@@ -57,6 +59,18 @@ export default function TodayPage() {
       console.error("Failed to toggle task:", err);
     } finally {
       setToggling(null);
+    }
+  }
+
+  async function handleNextDay() {
+    setAdvancing(true);
+    try {
+      const nextPlan = await dailyPlanApi.nextDay();
+      setPlan(nextPlan);
+    } catch (err) {
+      console.error("Failed to advance:", err);
+    } finally {
+      setAdvancing(false);
     }
   }
 
@@ -141,16 +155,30 @@ export default function TodayPage() {
 
       {/* All done banner */}
       {allDone && (
-        <div className="flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 p-4 card-glass">
-          <Trophy className="h-8 w-8 text-primary" />
-          <div>
-            <p className="font-semibold text-primary">
-              All tasks completed.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Great job today! Come back tomorrow for new tasks.
-            </p>
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/10 p-4 card-glass">
+          <div className="flex items-center gap-3">
+            <Trophy className="h-8 w-8 text-primary flex-shrink-0" />
+            <div>
+              <p className="font-semibold text-primary">
+                All tasks completed!
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Great job! Move on to the next day when you&apos;re ready.
+              </p>
+            </div>
           </div>
+          <button
+            onClick={handleNextDay}
+            disabled={advancing}
+            className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold whitespace-nowrap disabled:opacity-60 btn-accent"
+          >
+            {advancing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ArrowRight className="h-4 w-4" />
+            )}
+            Next Day
+          </button>
         </div>
       )}
 
