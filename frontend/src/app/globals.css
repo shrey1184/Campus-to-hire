@@ -226,7 +226,7 @@
   --color-border:               var(--border);
   --color-input:                var(--input);
   --color-ring:                 var(--ring);
-  --font-sans:  var(--font-quicksand);
+  --font-sans:  var(--font-poppins);
   --font-mono:  var(--font-jetbrains-mono);
   --font-serif: var(--font-playfair);
 }
@@ -241,7 +241,7 @@ body {
   background: var(--bg-base);
   color: var(--text-primary);
   color-scheme: var(--color-scheme);
-  font-family: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+  font-family: var(--font-sans, 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

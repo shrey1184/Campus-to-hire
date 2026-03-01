@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Quicksand, JetBrains_Mono, Playfair_Display } from "next/font/google";
+import { Poppins, JetBrains_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
 
-const quicksand = Quicksand({
-  variable: "--font-quicksand",
+const poppins = Poppins({
+  variable: "--font-poppins",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400"],
   display: "swap",
 });
 
@@ -40,7 +40,7 @@ export default function RootLayout({
     <html lang="en" data-theme="light" suppressHydrationWarning>
       <body
         suppressHydrationWarning
-        className={`${quicksand.variable} ${jetbrainsMono.variable} ${playfairDisplay.variable} antialiased`}
+        className={`${poppins.variable} ${jetbrainsMono.variable} ${playfairDisplay.variable} antialiased`}
       >
         <ThemeProvider>
           <AuthProvider>{children}</AuthProvider>
