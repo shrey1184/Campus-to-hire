@@ -1,0 +1,347 @@
+import re
+
+with open("src/app/dashboard/jd-analyze/page.tsx", "r") as f:
+    content = f.read()
+
+# Replace Imports
+imports = """import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+"""
+
+content = re.sub(r'import \{ useState \}\s*from "react";', 
+                 imports + '\nimport { useState } from "react";', content)
+
+# Sample JD Use button
+sample_jd_btn_old = """          <label className="text-sm font-semibold">Job Description</label>
+          <button
+            onClick={useSample}
+            className="link-glow flex items-center gap-1 text-xs"
+          >
+            <Clipboard className="h-3 w-3" />
+            Use Sample JD
+          </button>"""
+
+sample_jd_btn_new = """          <Label className="text-sm font-semibold">Job Description</Label>
+          <Button
+            variant="ghost" 
+            size="sm"
+            onClick={useSample}
+            className="h-8 gap-1 text-xs"
+          >
+            <Clipboard className="h-3 w-3" />
+            Use Sample JD
+          </Button>"""
+content = content.replace(sample_jd_btn_old, sample_jd_btn_new)
+
+# JD Wrapper Card
+jd_card_old = """      {/* Input */}
+      <div className="rounded-2xl p-5 sm:p-6 card-dark">
+        <div className="mb-3 flex items-center justify-between">"""
+
+jd_card_new = """      {/* Input */}
+      <Card>
+        <CardContent className="p-5 sm:p-6">
+          <div className="mb-4 flex items-center justify-between">"""
+content = content.replace(jd_card_old, jd_card_new)
+
+# Textarea and Analyze Button
+textarea_old = """        <textarea
+          value={jdText}
+          onChange={(e) => setJdText(e.target.value)}
+          placeholder="Paste the full job description here..."
+          rows={10}
+          className="w-full rounded-lg px-4 py-3 text-sm outline-none resize-none input-dark"
+        />
+        <button
+          onClick={handleAnalyze}
+          disabled={loading || !jdText.trim()}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold disabled:opacity-50 btn-accent"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin spinner-glow" />
+              Analyzing with AI...
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4" />
+              Analyze Job Description
+            </>
+          )}
+        </button>
+      </div>"""
+
+textarea_new = """        <Textarea
+          value={jdText}
+          onChange={(e) => setJdText(e.target.value)}
+          placeholder="Paste the full job description here..."
+          rows={10}
+          className="w-full resize-none"
+        />
+        <Button
+          onClick={handleAnalyze}
+          disabled={loading || !jdText.trim()}
+          className="mt-4 w-full gap-2"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Analyzing with AI...
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4" />
+              Analyze Job Description
+            </>
+          )}
+        </Button>
+        </CardContent>
+      </Card>"""
+content = content.replace(textarea_old, textarea_new)
+
+# Error Alert
+error_old = """      {error && (
+        <div className="rounded-lg bg-destructive/10 p-4 text-sm text-destructive flex items-center gap-2 border border-destructive/30">
+          <AlertTriangle className="h-4 w-4" />
+          {error}
+        </div>
+      )}"""
+
+error_new = """      {error && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}"""
+content = content.replace(error_old, error_new)
+
+# Summary Card
+summary_old = """          {/* Summary */}
+          <div className="rounded-2xl p-5 sm:p-6 card-dark">
+            <h2 className="mb-4 heading-md font-semibold">Analysis Summary</h2>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Role</p>
+                <p className="font-semibold capitalize">{analysis.role}</p>
+              </div>
+              {analysis.company && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Company</p>
+                  <p className="font-semibold">{analysis.company}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-xs text-muted-foreground">Required Skills</p>
+                <p className="font-semibold">{analysis.required_skills.length}</p>
+              </div>
+            </div>
+          </div>"""
+
+summary_new = """          {/* Summary */}
+          <Card>
+            <CardHeader className="pb-3 border-b px-5 sm:px-6">
+               <CardTitle>Analysis Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 sm:p-6 pt-5">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Role</p>
+                  <p className="font-semibold capitalize">{analysis.role}</p>
+                </div>
+                {analysis.company && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Company</p>
+                    <p className="font-semibold">{analysis.company}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs text-muted-foreground">Required Skills</p>
+                  <p className="font-semibold">{analysis.required_skills.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>"""
+content = content.replace(summary_old, summary_new)
+
+
+# Required Skills Card
+req_skills_old = """          {/* Required Skills */}
+          <div className="rounded-2xl p-5 sm:p-6 card-dark">
+            <h2 className="mb-4 heading-md font-semibold">Required Skills</h2>
+            <div className="space-y-2">
+              {analysis.required_skills.map((skill, i) => (
+                <div
+                  key={i}
+                  className="flex flex-col gap-2 rounded-lg border border-border/30 p-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <span className="text-sm font-medium">{skill.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground capitalize">
+                      {skill.level}
+                    </span>
+                    {skill.importance && (
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                        priorityColors[skill.importance.toLowerCase()] || "bg-secondary text-secondary-foreground"
+                      }`}>
+                        {skill.importance}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>"""
+
+req_skills_new = """          {/* Required Skills */}
+          <Card>
+            <CardHeader className="pb-3 border-b px-5 sm:px-6">
+              <CardTitle>Required Skills</CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 sm:p-6 pt-5 space-y-3">
+              {analysis.required_skills.map((skill, i) => (
+                <div
+                  key={i}
+                  className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <span className="text-sm font-medium">{skill.name}</span>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="capitalize text-[10px]">
+                      {skill.level}
+                    </Badge>
+                    {skill.importance && (
+                      <Badge variant="secondary" className="capitalize text-[10px]">
+                        {skill.importance}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>"""
+content = content.replace(req_skills_old, req_skills_new)
+
+
+# Gap Analysis
+gap_old = """          {/* Gap Analysis */}
+          {analysis.gap_analysis.length > 0 && (
+            <div className="rounded-2xl p-5 sm:p-6 card-dark">
+              <h2 className="mb-4 heading-md font-semibold flex items-center gap-2">
+                <ArrowUpCircle className="h-5 w-5 text-primary" />
+                Skill Gaps
+              </h2>
+              <div className="space-y-3">
+                {analysis.gap_analysis.map((gap, i) => (
+                  <div key={i} className="rounded-lg border border-border/30 p-4">
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-medium text-sm">{gap.skill}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                        priorityColors[gap.priority?.toLowerCase()] || "bg-secondary text-secondary-foreground"
+                      }`}>
+                        {gap.priority}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <span>Current: {gap.current_level}</span>
+                      <ChevronRight className="h-3 w-3" />
+                      <span>Required: {gap.required_level}</span>
+                    </div>
+                    {gap.gap && (
+                      <p className="mt-1 text-xs text-muted-foreground">{gap.gap}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}"""
+
+gap_new = """          {/* Gap Analysis */}
+          {analysis.gap_analysis.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3 border-b px-5 sm:px-6">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <ArrowUpCircle className="h-5 w-5 text-primary" />
+                  Skill Gaps
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-5 sm:p-6 pt-5 space-y-4">
+                {analysis.gap_analysis.map((gap, i) => (
+                  <div key={i} className="rounded-lg border p-4 bg-muted/20">
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-medium text-sm">{gap.skill}</span>
+                      <Badge variant="destructive" className="capitalize text-[10px]">
+                        {gap.priority}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground mb-2">
+                      <span>Current: {gap.current_level}</span>
+                      <ChevronRight className="h-3 w-3" />
+                      <span>Required: {gap.required_level}</span>
+                    </div>
+                    {gap.gap && (
+                      <p className="text-xs text-muted-foreground">{gap.gap}</p>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}"""
+content = content.replace(gap_old, gap_new)
+
+# Recommendations
+rec_old = """          {/* Recommendations */}
+          {analysis.recommendations.length > 0 && (
+            <div className="rounded-2xl p-5 sm:p-6 card-dark">
+              <h2 className="mb-4 heading-md font-semibold flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+                Recommendations
+              </h2>
+              <ul className="space-y-2">
+                {analysis.recommendations.map((rec, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-2 text-sm"
+                  >
+                    <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
+                    {rec}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}"""
+
+rec_new = """          {/* Recommendations */}
+          {analysis.recommendations.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3 border-b px-5 sm:px-6">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  Recommendations
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-5 sm:p-6 pt-5">
+                <ul className="space-y-3">
+                  {analysis.recommendations.map((rec, i) => (
+                    <li
+                      key={i}
+                      className="flex items-start gap-3 text-sm"
+                    >
+                      <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
+                      <span className="text-muted-foreground">{rec}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}"""
+content = content.replace(rec_old, rec_new)
+
+# Get rid of priorityColors as we use standard badge variants now
+content = re.sub(r'const priorityColors: Record<string, string> = \{[^\}]+\};', '', content)
+
+with open("src/app/dashboard/jd-analyze/page.tsx", "w") as f:
+    f.write(content)
+
