@@ -34,6 +34,7 @@ export default function RoadmapPage() {
   const [generatingWeek, setGeneratingWeek] = useState<number | null>(null);
   const [totalWeeksToGen, setTotalWeeksToGen] = useState(0);
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -189,8 +190,10 @@ export default function RoadmapPage() {
                 const isPending = week.pending || !week.days?.length;
                 const isGeneratingThis = generatingWeek === week.week;
                 
-                // Calculate progress for current/past weeks
-                const weekProgress = isPast ? 100 : isCurrent ? 46 : 0;
+                // Calculate progress based on actual task completion
+                const allTasks = week.days?.flatMap(d => d.tasks || []) || [];
+                const completedTasks = allTasks.filter(t => t.completed).length;
+                const weekProgress = allTasks.length > 0 ? Math.round((completedTasks / allTasks.length) * 100) : 0;
 
                 return (
                   <div
@@ -269,7 +272,7 @@ export default function RoadmapPage() {
                           <div className="flex items-center gap-2">
                             {!isPending && (
                               <>
-                                {(isCurrent || isPast) && (
+                                {allTasks.length > 0 && (
                                   <div className="hidden sm:block">
                                     <div className="text-xs text-muted-foreground mb-1">Progress</div>
                                     <div className="flex items-center gap-2">
@@ -300,67 +303,121 @@ export default function RoadmapPage() {
                         <div className="pt-4 space-y-5">
                           <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Modules</h4>
                           {week.days.map((day, dayIndex) => {
-                            const dayCompleted = dayIndex === 0; // Mock: first day completed
-                            const dayInProgress = dayIndex === 1; // Mock: second day in progress
+                            const dayKey = `w${index}-d${dayIndex}`;
+                            const isDayExpanded = expandedDay === dayKey;
+                            const allTasksCompleted = day.tasks?.length > 0 && day.tasks.every((t) => t.completed);
+                            const someTasksCompleted = day.tasks?.some((t) => t.completed);
+                            const completedCount = day.tasks?.filter((t) => t.completed).length || 0;
+                            const totalTasks = day.tasks?.length || 0;
                             
                             return (
                               <div key={dayIndex} className="space-y-3">
-                                <div className="flex items-center gap-3">
+                                <button
+                                  className="flex w-full items-center gap-3 text-left hover:bg-muted/30 rounded-lg p-2 -m-2 transition"
+                                  onClick={() => setExpandedDay(isDayExpanded ? null : dayKey)}
+                                >
                                   <div
-                                    className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
-                                      dayCompleted
+                                    className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold flex-shrink-0 ${
+                                      allTasksCompleted
                                         ? "bg-primary text-primary-foreground"
-                                        : dayInProgress
+                                        : someTasksCompleted
                                         ? "border-2 border-primary bg-transparent text-primary"
                                         : "bg-muted text-muted-foreground"
                                     }`}
                                   >
-                                    {dayCompleted ? (
+                                    {allTasksCompleted ? (
                                       <CheckCircle2 className="h-4 w-4" />
                                     ) : (
                                       dayIndex + 1
                                     )}
                                   </div>
-                                  <div className="flex-1">
+                                  <div className="flex-1 min-w-0">
                                     <p className="text-sm font-semibold">
                                       {day.title || `Day ${day.day || dayIndex + 1}`}
                                     </p>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <button className="rounded-md border border-border px-3 py-1 text-xs font-medium hover:bg-muted/50 transition">
-                                      {dayCompleted ? "Review" : dayInProgress ? "Start" : "Theory"}
-                                    </button>
-                                    {dayInProgress && (
-                                      <button className="rounded-md bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition">
-                                        Start 📚
-                                      </button>
+                                    {totalTasks > 0 && (
+                                      <p className="text-xs text-muted-foreground">
+                                        {completedCount}/{totalTasks} tasks completed
+                                      </p>
                                     )}
                                   </div>
-                                </div>
+                                  <div className="flex items-center gap-2">
+                                    {totalTasks > 0 && (
+                                      <span className="text-xs text-muted-foreground tabular-nums">
+                                        {day.tasks.reduce((sum, t) => sum + (t.duration_minutes || 0), 0)}m
+                                      </span>
+                                    )}
+                                    {isDayExpanded ? (
+                                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                    )}
+                                  </div>
+                                </button>
                                 
                                 {/* Task list for expanded day */}
-                                {dayInProgress && day.tasks && (
-                                  <div className="ml-9 space-y-2 border-l-2 border-border pl-4">
-                                    {day.tasks.slice(0, 3).map((task, ti) => (
+                                {isDayExpanded && day.tasks && (
+                                  <div className="ml-9 space-y-3 border-l-2 border-border pl-4">
+                                    {day.tasks.map((task, ti) => (
                                       <div
                                         key={task.id || ti}
-                                        className="flex items-start gap-2 text-sm"
+                                        className="space-y-1.5"
                                       >
-                                        <div className="mt-1 text-muted-foreground">
-                                          {TYPE_ICONS[task.type] || <BookOpen className="h-3.5 w-3.5" />}
-                                        </div>
-                                        <div className="flex-1">
-                                          <p className="font-medium">{task.title}</p>
-                                          {task.description && (
-                                            <p className="text-xs text-muted-foreground mt-0.5">
-                                              {task.description}
+                                        <div className="flex items-start gap-2 text-sm">
+                                          <div className={`mt-0.5 ${task.completed ? "text-primary" : "text-muted-foreground"}`}>
+                                            {task.completed ? (
+                                              <CheckCircle2 className="h-3.5 w-3.5" />
+                                            ) : (
+                                              TYPE_ICONS[task.type] || <BookOpen className="h-3.5 w-3.5" />
+                                            )}
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <p className={`font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`}>
+                                              {task.title}
                                             </p>
-                                          )}
+                                            {task.description && (
+                                              <p className="text-xs text-muted-foreground mt-0.5">
+                                                {task.description}
+                                              </p>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center gap-2 flex-shrink-0">
+                                            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium capitalize">
+                                              {task.type}
+                                            </span>
+                                            {task.duration_minutes && (
+                                              <span className="text-xs text-muted-foreground whitespace-nowrap tabular-nums">
+                                                {task.duration_minutes}m
+                                              </span>
+                                            )}
+                                          </div>
                                         </div>
-                                        {task.duration_minutes && (
-                                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                            {task.duration_minutes}m
-                                          </span>
+                                        {/* Resources / Links */}
+                                        {task.resources && task.resources.length > 0 && (
+                                          <div className="ml-5 flex flex-wrap gap-2">
+                                            {task.resources.map((res, ri) => (
+                                              res.url ? (
+                                                <a
+                                                  key={ri}
+                                                  href={res.url}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/10 transition"
+                                                >
+                                                  <BookOpen className="h-3 w-3" />
+                                                  {res.title}
+                                                </a>
+                                              ) : (
+                                                <span
+                                                  key={ri}
+                                                  className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+                                                >
+                                                  <BookOpen className="h-3 w-3" />
+                                                  {res.title}
+                                                </span>
+                                              )
+                                            ))}
+                                          </div>
                                         )}
                                       </div>
                                     ))}
