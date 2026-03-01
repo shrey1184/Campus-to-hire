@@ -7,8 +7,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: production
-    image: campus-to-hire-api:latest
-    container_name: campus-to-hire-api
+    image: campus-for-hire-api:latest
+    container_name: campus-for-hire-api
     ports:
       - "8000:8000"
     environment:
@@ -60,8 +60,8 @@ services:
     build:
       context: ./nginx
       dockerfile: Dockerfile
-    image: campus-to-hire-nginx:latest
-    container_name: campus-to-hire-nginx
+    image: campus-for-hire-nginx:latest
+    container_name: campus-for-hire-nginx
     ports:
       - "80:80"
       - "443:443"

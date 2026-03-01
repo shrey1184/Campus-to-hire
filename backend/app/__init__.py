@@ -1,5 +1,5 @@
 """
-Campus-to-Hire FastAPI Application
+Campus-for-Hire FastAPI Application
 
 AI-powered campus placement preparation platform for Indian students.
 """

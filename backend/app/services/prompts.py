@@ -1,6 +1,6 @@
 """
 Prompt templates for AI services.
-Contains all system prompts and user prompt generators for the Campus-to-Hire platform.
+Contains all system prompts and user prompt generators for the Campus-for-Hire platform.
 """
 
 # ═══════════════════════════════════════════════════════════════════════════════

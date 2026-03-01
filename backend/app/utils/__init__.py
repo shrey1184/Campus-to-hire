@@ -1,1 +1,1 @@
-"""Utility modules for the Campus-to-Hire platform."""
+"""Utility modules for the Campus-for-Hire platform."""

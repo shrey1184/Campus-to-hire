@@ -26,7 +26,7 @@ const playfairDisplay = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Campus-to-Hire | AI-Powered Placement Prep",
+  title: "Campus-for-Hire | AI-Powered Placement Prep",
   description:
     "Personalized, AI-driven campus placement preparation platform for Indian students.",
 };

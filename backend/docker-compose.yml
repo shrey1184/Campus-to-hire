@@ -4,7 +4,7 @@ services:
   # PostgreSQL database for local development
   db:
     image: postgres:16-alpine
-    container_name: campus-to-hire-db
+    container_name: campus-for-hire-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -26,7 +26,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: campus-to-hire-api
+    container_name: campus-for-hire-api
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/campus_to_hire
       JWT_SECRET: ${JWT_SECRET:-dev-secret-key-change-in-production}
@@ -51,7 +51,7 @@ services:
   # Nginx reverse proxy
   nginx:
     image: nginx:alpine
-    container_name: campus-to-hire-nginx
+    container_name: campus-for-hire-nginx
     ports:
       - "80:80"
       - "443:443"
@@ -67,7 +67,7 @@ services:
 
 volumes:
   postgres_data:
-    name: campus-to-hire-postgres-data
+    name: campus-for-hire-postgres-data
 
 networks:
   campus-network:

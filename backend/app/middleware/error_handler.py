@@ -1,4 +1,4 @@
-"""Global error handling middleware for the Campus-to-Hire API."""
+"""Global error handling middleware for the Campus-for-Hire API."""
 
 from __future__ import annotations
 

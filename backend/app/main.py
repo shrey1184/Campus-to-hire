@@ -28,7 +28,7 @@ if settings.AUTO_CREATE_TABLES:
     Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="Campus-to-Hire API",
+    title="Campus-for-Hire API",
     description="AI-powered personalization platform for Indian campus placements",
     version="1.0.0",
 )
@@ -74,7 +74,7 @@ app.include_router(dashboard.router)
 
 @app.get("/")
 def root():
-    return {"status": "ok", "message": "Campus-to-Hire API is running"}
+    return {"status": "ok", "message": "Campus-for-Hire API is running"}
 
 
 @app.get("/health")

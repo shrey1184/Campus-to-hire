@@ -2,7 +2,7 @@
 set -e
 
 echo "========================================"
-echo "  Campus-to-Hire API Startup Script"
+echo "  Campus-for-Hire API Startup Script"
 echo "========================================"
 
 # Colors for output
@@ -79,7 +79,7 @@ setup_logs() {
 
 # Main startup sequence
 main() {
-    log_info "Starting Campus-to-Hire API..."
+    log_info "Starting Campus-for-Hire API..."
     
     # Setup logs
     setup_logs

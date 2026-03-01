@@ -1,11 +1,11 @@
-# Campus-to-Hire — MVP Build Plan
+# Campus-for-Hire — MVP Build Plan
 ### AI for Bharat Hackathon · Prototype Phase · Deadline: March 4, 2026
 
 ---
 
 ## Overview
 
-This document is the 7-day execution plan for building the **Campus-to-Hire Personalization Platform** MVP — an AI-driven product that gives Indian students (especially from Tier-2/3 colleges and non-English backgrounds) a personalized, structured roadmap to become job-ready.
+This document is the 7-day execution plan for building the **Campus-for-Hire Personalization Platform** MVP — an AI-driven product that gives Indian students (especially from Tier-2/3 colleges and non-English backgrounds) a personalized, structured roadmap to become job-ready.
 
 **Team:** 3 people · **Budget:** $100 AWS credits · **Deadline:** March 4, 2026
 

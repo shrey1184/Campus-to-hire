@@ -1,4 +1,4 @@
-# 🎓 Campus-to-Hire — AI-Powered Placement Preparation Platform
+# 🎓 Campus-for-Hire — AI-Powered Placement Preparation Platform
 
 <div align="center">
 

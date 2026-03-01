@@ -1,4 +1,4 @@
-# Campus-to-Hire Backend (FastAPI)
+# Campus-for-Hire Backend (FastAPI)
 
 ## Local setup (venv-first)
 

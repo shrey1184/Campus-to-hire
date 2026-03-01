@@ -1,7 +1,7 @@
-Campus-to-Hire Database Migrations
+Campus-for-Hire Database Migrations
 ==================================
 
-This directory contains Alembic database migration scripts for the Campus-to-Hire platform.
+This directory contains Alembic database migration scripts for the Campus-for-Hire platform.
 
 ## Quick Reference
 

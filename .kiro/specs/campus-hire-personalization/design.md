@@ -1,8 +1,8 @@
-# Design: Campus-to-Hire Personalization Platform
+# Design: Campus-for-Hire Personalization Platform
 
 ## 1. System Overview
 
-The Campus-to-Hire Personalization Platform is an AI-driven system that transforms generic career preparation into personalized, goal-aligned learning experiences. The platform analyzes student profiles, job market requirements, and learning patterns to generate adaptive roadmaps with daily actionable tasks.
+The Campus-for-Hire Personalization Platform is an AI-driven system that transforms generic career preparation into personalized, goal-aligned learning experiences. The platform analyzes student profiles, job market requirements, and learning patterns to generate adaptive roadmaps with daily actionable tasks.
 
 ### 1.1 Core Architecture
 

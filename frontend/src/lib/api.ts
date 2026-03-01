@@ -1,5 +1,5 @@
 /**
- * API client for the Campus-to-Hire FastAPI backend.
+ * API client for the Campus-for-Hire FastAPI backend.
  */
 
 import type {

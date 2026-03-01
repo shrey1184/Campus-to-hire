@@ -4,7 +4,7 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* ================================================================
-   CAMPUS-TO-HIRE — DESIGN SYSTEM
+   CAMPUS-FOR-HIRE — DESIGN SYSTEM
    ================================================================
    All visual styling flows from the CSS variables below.
    To rebrand or retheme, just change the variable values.

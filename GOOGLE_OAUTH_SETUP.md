@@ -1,6 +1,6 @@
 # Google OAuth Setup Guide
 
-This guide will help you set up Google OAuth authentication for Campus-to-Hire.
+This guide will help you set up Google OAuth authentication for Campus-for-Hire.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ This guide will help you set up Google OAuth authentication for Campus-to-Hire.
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Click on the project dropdown at the top
 3. Click "New Project"
-4. Enter a project name (e.g., "Campus-to-Hire")
+4. Enter a project name (e.g., "Campus-for-Hire")
 5. Click "Create"
 
 ## Step 2: Enable Google+ API
@@ -27,7 +27,7 @@ This guide will help you set up Google OAuth authentication for Campus-to-Hire.
 2. Select "External" user type
 3. Click "Create"
 4. Fill in the required information:
-   - **App name**: Campus-to-Hire
+   - **App name**: Campus-for-Hire
    - **User support email**: Your email
    - **Developer contact information**: Your email
 5. Click "Save and Continue"
@@ -46,7 +46,7 @@ This guide will help you set up Google OAuth authentication for Campus-to-Hire.
 2. Click "Create Credentials" > "OAuth client ID"
 3. Select "Web application" as the application type
 4. Fill in the details:
-   - **Name**: Campus-to-Hire Web Client
+   - **Name**: Campus-for-Hire Web Client
    
    **Authorized JavaScript origins**:
    - `http://localhost:3000` (for local development)

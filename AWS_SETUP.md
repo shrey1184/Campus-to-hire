@@ -1,4 +1,4 @@
-# AWS Configuration Guide — Campus-to-Hire
+# AWS Configuration Guide — Campus-for-Hire
 
 > **Budget:** $200 AWS credits | **Goal:** Keep total spend under $30  
 > **Region:** `ap-south-1` (Mumbai) — closest to Indian users, cheapest for Bedrock
@@ -100,7 +100,7 @@ Skip to [Step 2](#3-step-2-create-iam-user-least-privilege).
 ### B. Create IAM User
 
 1. Go to **IAM** → **Users** → **Create user**
-2. User name: `campus-to-hire-app`
+2. User name: `campus-for-hire-app`
 3. Do NOT enable console access (this is a programmatic-only user)
 4. Click **Next**
 5. Select **Attach policies directly** → search and select `CampusToHire-AppPolicy`
@@ -108,7 +108,7 @@ Skip to [Step 2](#3-step-2-create-iam-user-least-privilege).
 
 ### C. Create Access Keys
 
-1. Click on the user `campus-to-hire-app`
+1. Click on the user `campus-for-hire-app`
 2. Go to **Security credentials** tab
 3. Click **Create access key**
 4. Select **Application running outside AWS** (or "Local code")
@@ -224,10 +224,10 @@ Expected output:
 
 1. Go to **EC2** → **Launch instance**
 2. Configure:
-   - **Name:** `campus-to-hire-backend`
+   - **Name:** `campus-for-hire-backend`
    - **AMI:** Amazon Linux 2023 (free tier eligible)
    - **Instance type:** `t2.micro` (free tier) or `t3.micro` ($0.0052/hr in Mumbai)
-   - **Key pair:** Create new → `campus-to-hire-key` → Download `.pem` file
+   - **Key pair:** Create new → `campus-for-hire-key` → Download `.pem` file
    - **Security group:** Create new with these rules:
 
 | Type | Port | Source | Purpose |
@@ -244,7 +244,7 @@ Expected output:
 
 ```bash
 # SSH into your instance
-ssh -i ~/.ssh/campus-to-hire-key.pem ec2-user@<YOUR_EC2_PUBLIC_IP>
+ssh -i ~/.ssh/campus-for-hire-key.pem ec2-user@<YOUR_EC2_PUBLIC_IP>
 
 # Install Docker
 sudo yum update -y
@@ -255,15 +255,15 @@ sudo usermod -aG docker ec2-user
 
 # Log out and back in for docker group to take effect
 exit
-ssh -i ~/.ssh/campus-to-hire-key.pem ec2-user@<YOUR_EC2_PUBLIC_IP>
+ssh -i ~/.ssh/campus-for-hire-key.pem ec2-user@<YOUR_EC2_PUBLIC_IP>
 
 # Install Docker Compose
 sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
 
 # Clone your repo
-git clone <YOUR_REPO_URL> campus-to-hire
-cd campus-to-hire/backend
+git clone <YOUR_REPO_URL> campus-for-hire
+cd campus-for-hire/backend
 
 # Create .env file on the server (paste your env vars)
 nano .env
@@ -436,7 +436,7 @@ AWS **will not automatically stop services** when you run out of credits. You mu
 | Setting | Value |
 |---|---|
 | Budget type | Cost budget |
-| Budget name | `campus-to-hire-budget` |
+| Budget name | `campus-for-hire-budget` |
 | Period | Monthly |
 | Budget amount | `$30` (monthly cap target) |
 
@@ -696,7 +696,7 @@ ExpiredTokenException: The security token included in the request is expired
 If you suspect runaway costs:
 
 ### Option 1: Deactivate IAM Access Keys (Instant)
-1. **IAM** → **Users** → `campus-to-hire-app` → **Security credentials**
+1. **IAM** → **Users** → `campus-for-hire-app` → **Security credentials**
 2. Click **Deactivate** on the access key
 3. This immediately stops all API calls from your app
 
@@ -704,7 +704,7 @@ If you suspect runaway costs:
 1. **EC2 Console** → Select your instance → **Stop instance**
 
 ### Option 3: Delete IAM User (Nuclear)
-1. **IAM** → **Users** → `campus-to-hire-app` → **Delete**
+1. **IAM** → **Users** → `campus-for-hire-app` → **Delete**
 2. This revokes all access permanently (you can create a new user later)
 
 > After any emergency action, check your bill at https://console.aws.amazon.com/billing/home#/ and investigate what caused the spike.

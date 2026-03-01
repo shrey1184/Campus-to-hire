@@ -1,4 +1,4 @@
-"""Rate limiting middleware for the Campus-to-Hire API."""
+"""Rate limiting middleware for the Campus-for-Hire API."""
 
 from __future__ import annotations
 

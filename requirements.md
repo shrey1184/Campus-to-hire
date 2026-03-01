@@ -1,4 +1,4 @@
-# Requirements: Campus-to-Hire Personalization Platform
+# Requirements: Campus-for-Hire Personalization Platform
 
 ## 1. Overview
 
