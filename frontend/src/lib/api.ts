@@ -8,6 +8,7 @@ import type {
   UserProfileUpdate,
   UserProgressStats,
   DashboardStats,
+  CompleteDashboardStats,
   Roadmap,
   DailyPlan,
   Interview,
@@ -213,4 +214,11 @@ export const translateApi = {
       method: "POST",
       body: JSON.stringify({ text, target_language: targetLanguage }),
     }),
+};
+
+// ── Dashboard ────────────────────────────────────────────────────────────────
+
+export const dashboardApi = {
+  getCompleteStats: () =>
+    request<CompleteDashboardStats>("/api/dashboard/stats"),
 };

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { profileApi, roadmapApi, dailyPlanApi } from "@/lib/api";
-import type { UserProgressStats, DashboardStats, Roadmap, DailyPlan } from "@/types";
+import { profileApi, roadmapApi, dailyPlanApi, dashboardApi } from "@/lib/api";
+import type { UserProgressStats, DashboardStats, Roadmap, DailyPlan, CompleteDashboardStats } from "@/types";
 import Link from "next/link";
 import {
   Target,
@@ -33,6 +33,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [progress, setProgress] = useState<UserProgressStats | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [completeStats, setCompleteStats] = useState<CompleteDashboardStats | null>(null);
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
   const [todayPlan, setTodayPlan] = useState<DailyPlan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,12 +41,14 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const [p, s] = await Promise.all([
+        const [p, s, cs] = await Promise.all([
           profileApi.getProgress().catch(() => null),
           profileApi.getStats().catch(() => null),
+          dashboardApi.getCompleteStats().catch(() => null),
         ]);
         setProgress(p);
         setStats(s);
+        setCompleteStats(cs);
 
         const rm = await roadmapApi.getActive().catch(() => null);
         setRoadmap(rm);
@@ -79,11 +82,14 @@ export default function DashboardPage() {
   const targetRole = user?.target_role?.replace(/_/g, " ") || "SDE at Amazon";
   const daysLeft = roadmap ? Math.max(0, (roadmap.total_weeks - (roadmap.current_week - 1)) * 7) : 85;
 
-  // Calculate XP and level (gamification)
-  const totalXP = (progress?.completed_tasks ?? 0) * 10 + (progress?.total_interviews ?? 0) * 25;
-  const currentLevel = Math.floor(totalXP / 100) + 1;
-  const xpInCurrentLevel = totalXP % 100;
-  const xpForNextLevel = 100;
+  // Use dynamic data from backend if available, fallback to calculations
+  const totalXP = completeStats?.total_xp ?? ((progress?.completed_tasks ?? 0) * 10 + (progress?.total_interviews ?? 0) * 25);
+  const currentLevel = completeStats?.current_level ?? (Math.floor(totalXP / 100) + 1);
+  const xpInCurrentLevel = completeStats?.xp_in_current_level ?? (totalXP % 100);
+  const xpForNextLevel = completeStats?.xp_for_next_level ?? 100;
+  const xpGainedToday = completeStats?.xp_gained_today ?? Math.floor(Math.random() * 50 + 10);
+  const streakDays = completeStats?.streak_days ?? (stats?.streak_days ?? 0);
+  const personalBestStreak = completeStats?.personal_best_streak ?? Math.max(streakDays, 7);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -142,7 +148,7 @@ export default function DashboardPage() {
             <Sparkles className="h-4 w-4 text-primary" />
           </div>
           <p className="text-2xl font-bold">{totalXP.toLocaleString()}</p>
-          <p className="text-xs text-muted-foreground mt-1">+{Math.floor(Math.random() * 50 + 10)} today</p>
+          <p className="text-xs text-muted-foreground mt-1">+{xpGainedToday} today</p>
         </div>
 
         <div className="rounded-xl p-4 card-dark border-l-4 border-l-amber-500">
@@ -150,8 +156,8 @@ export default function DashboardPage() {
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Streak</span>
             <Flame className="h-4 w-4 text-amber-500" />
           </div>
-          <p className="text-2xl font-bold">{stats?.streak_days ?? 0} Days</p>
-          <p className="text-xs text-muted-foreground mt-1">Personal best: {Math.max(stats?.streak_days ?? 0, 7)}</p>
+          <p className="text-2xl font-bold">{streakDays} Days</p>
+          <p className="text-xs text-muted-foreground mt-1">Personal best: {personalBestStreak}</p>
         </div>
 
         <div className="rounded-xl p-4 card-dark border-l-4 border-l-emerald-500">
@@ -159,8 +165,8 @@ export default function DashboardPage() {
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Solved</span>
             <CheckCircle2 className="h-4 w-4 text-emerald-500" />
           </div>
-          <p className="text-2xl font-bold">{progress?.completed_tasks ?? 0}</p>
-          <p className="text-xs text-muted-foreground mt-1">{progress?.completion_rate ?? 0}% completion</p>
+          <p className="text-2xl font-bold">{completeStats?.problems_solved ?? progress?.completed_tasks ?? 0}</p>
+          <p className="text-xs text-muted-foreground mt-1">{completeStats?.completion_rate ?? progress?.completion_rate ?? 0}% completion</p>
         </div>
 
         <div className="rounded-xl p-4 card-dark border-l-4 border-l-blue-500">
@@ -168,8 +174,8 @@ export default function DashboardPage() {
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Interviews</span>
             <MessageSquare className="h-4 w-4 text-blue-500" />
           </div>
-          <p className="text-2xl font-bold">{progress?.total_interviews ?? 0}</p>
-          <p className="text-xs text-muted-foreground mt-1">Avg: {progress?.average_interview_score ?? 78}/100</p>
+          <p className="text-2xl font-bold">{completeStats?.total_interviews ?? progress?.total_interviews ?? 0}</p>
+          <p className="text-xs text-muted-foreground mt-1">Avg: {completeStats?.average_interview_score ?? progress?.average_interview_score ?? 78}/100</p>
         </div>
       </div>
 
@@ -275,7 +281,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Skill Analysis */}
-          {stats?.skill_levels && Object.keys(stats.skill_levels).length > 0 && (
+          {(completeStats?.skill_levels || stats?.skill_levels) && Object.keys(completeStats?.skill_levels || stats?.skill_levels || {}).length > 0 && (
             <div className="rounded-2xl p-5 sm:p-6 card-dark border border-border">
               <div className="mb-4 flex items-center justify-between">
                 <div>
@@ -286,7 +292,7 @@ export default function DashboardPage() {
               </div>
               
               {/* Radar Chart */}
-              <RadarChart skills={stats.skill_levels} />
+              <RadarChart skills={completeStats?.skill_levels || stats?.skill_levels || {}} />
             </div>
           )}
 
@@ -299,11 +305,11 @@ export default function DashboardPage() {
               </div>
               <TrendingUp className="h-5 w-5 text-primary" />
             </div>
-            <PerformanceChart />
+            <PerformanceChart performanceTrend={completeStats?.performance_trend} />
           </div>
 
           {/* Activity Heatmap - GitHub style */}
-          <ActivityHeatmap stats={stats} />
+          <ActivityHeatmap activityData={completeStats?.activity_heatmap} />
         </div>
 
         {/* Right column - 1/3 width */}
@@ -315,34 +321,49 @@ export default function DashboardPage() {
               <Trophy className="h-4 w-4 text-primary" />
             </div>
             <div className="space-y-3">
-              <AchievementBadge
-                icon={<Flame className="h-5 w-5" />}
-                title="Fire Starter"
-                description="5 day streak"
-                earned={true}
-                color="bg-amber-500/15 text-amber-500"
-              />
-              <AchievementBadge
-                icon={<Code2 className="h-5 w-5" />}
-                title="Code Warrior"
-                description="50 problems solved"
-                earned={progress?.completed_tasks ?? 0 >= 50}
-                color="bg-primary/15 text-primary"
-              />
-              <AchievementBadge
-                icon={<Star className="h-5 w-5" />}
-                title="Interview Pro"
-                description="10 interviews completed"
-                earned={progress?.total_interviews ?? 0 >= 10}
-                color="bg-blue-500/15 text-blue-500"
-              />
-              <AchievementBadge
-                icon={<Zap className="h-5 w-5" />}
-                title="Speed Demon"
-                description="Complete 3 tasks in 1 day"
-                earned={false}
-                color="bg-purple-500/15 text-purple-500"
-              />
+              {completeStats?.achievements ? (
+                completeStats.achievements.map((achievement) => (
+                  <AchievementBadge
+                    key={achievement.id}
+                    icon={getIconComponent(achievement.icon)}
+                    title={achievement.title}
+                    description={achievement.description}
+                    earned={achievement.earned}
+                    color={achievement.color}
+                  />
+                ))
+              ) : (
+                <>
+                  <AchievementBadge
+                    icon={<Flame className="h-5 w-5" />}
+                    title="Fire Starter"
+                    description="5 day streak"
+                    earned={streakDays >= 5}
+                    color="bg-amber-500/15 text-amber-500"
+                  />
+                  <AchievementBadge
+                    icon={<Code2 className="h-5 w-5" />}
+                    title="Code Warrior"
+                    description="50 problems solved"
+                    earned={(progress?.completed_tasks ?? 0) >= 50}
+                    color="bg-primary/15 text-primary"
+                  />
+                  <AchievementBadge
+                    icon={<Star className="h-5 w-5" />}
+                    title="Interview Pro"
+                    description="10 interviews completed"
+                    earned={(progress?.total_interviews ?? 0) >= 10}
+                    color="bg-blue-500/15 text-blue-500"
+                  />
+                  <AchievementBadge
+                    icon={<Zap className="h-5 w-5" />}
+                    title="Speed Demon"
+                    description="Complete 3 tasks in 1 day"
+                    earned={false}
+                    color="bg-purple-500/15 text-purple-500"
+                  />
+                </>
+              )}
             </div>
           </div>
 
@@ -355,22 +376,22 @@ export default function DashboardPage() {
             <div className="space-y-3">
               <StatItem
                 label="Problems Solved"
-                value={42}
+                value={completeStats?.weekly_stats.problems_solved ?? 0}
                 icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
               />
               <StatItem
                 label="Study Hours"
-                value="12.5"
+                value={completeStats?.weekly_stats.study_hours ?? 0}
                 icon={<Clock className="h-4 w-4 text-blue-500" />}
               />
               <StatItem
                 label="XP Gained"
-                value={485}
+                value={completeStats?.weekly_stats.xp_gained ?? 0}
                 icon={<Sparkles className="h-4 w-4 text-primary" />}
               />
               <StatItem
                 label="Tasks Completed"
-                value={completedTasks}
+                value={completeStats?.weekly_stats.tasks_completed ?? completedTasks}
                 icon={<Target className="h-4 w-4 text-amber-500" />}
               />
             </div>
@@ -387,13 +408,13 @@ export default function DashboardPage() {
                 <Award className="h-5 w-5 text-primary" />
               </div>
               <p className="text-3xl font-bold">
-                {progress?.average_interview_score ?? 78}<span className="text-lg text-muted-foreground">/100</span>
+                {completeStats?.average_interview_score ?? progress?.average_interview_score ?? 78}<span className="text-lg text-muted-foreground">/100</span>
               </p>
               <p className="mt-1 text-xs text-muted-foreground">Average performance score</p>
               <div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-primary to-amber-500"
-                  style={{ width: `${progress?.average_interview_score ?? 78}%` }}
+                  style={{ width: `${completeStats?.average_interview_score ?? progress?.average_interview_score ?? 78}%` }}
                 />
               </div>
             </div>
@@ -427,27 +448,41 @@ export default function DashboardPage() {
   );
 }
 
-function ActivityHeatmap({ stats }: { stats: DashboardStats | null }) {
-  // Generate last 12 weeks of activity data (84 days)
-  const weeks = 12;
-  const daysPerWeek = 7;
-  const today = new Date();
-  
-  const activityData: { date: Date; count: number; level: number }[] = [];
-  
-  for (let week = weeks - 1; week >= 0; week--) {
-    for (let day = daysPerWeek - 1; day >= 0; day--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - (week * daysPerWeek + day));
-      
-      // Generate semi-random activity (higher recent activity)
-      const recencyBonus = week < 2 ? 2 : 1;
-      const count = Math.floor(Math.random() * 8 * recencyBonus);
-      const level = count === 0 ? 0 : count < 3 ? 1 : count < 6 ? 2 : count < 10 ? 3 : 4;
-      
-      activityData.push({ date, count, level });
+// Helper function to get icon component from string
+function getIconComponent(iconName: string) {
+  const iconMap: Record<string, React.ReactNode> = {
+    Flame: <Flame className="h-5 w-5" />,
+    Code2: <Code2 className="h-5 w-5" />,
+    Star: <Star className="h-5 w-5" />,
+    Zap: <Zap className="h-5 w-5" />,
+    Trophy: <Trophy className="h-5 w-5" />,
+  };
+  return iconMap[iconName] || <Award className="h-5 w-5" />;
+}
+
+function ActivityHeatmap({ activityData }: { activityData?: Array<{ date: string; count: number; level: number }> }) {
+  // Use backend data if available, otherwise generate mock data
+  const finalActivityData = activityData || (() => {
+    const weeks = 12;
+    const daysPerWeek = 7;
+    const today = new Date();
+    const data: { date: string; count: number; level: number }[] = [];
+    
+    for (let week = weeks - 1; week >= 0; week--) {
+      for (let day = daysPerWeek - 1; day >= 0; day--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - (week * daysPerWeek + day));
+        
+        // Generate semi-random activity (higher recent activity)
+        const recencyBonus = week < 2 ? 2 : 1;
+        const count = Math.floor(Math.random() * 8 * recencyBonus);
+        const level = count === 0 ? 0 : count < 3 ? 1 : count < 6 ? 2 : count < 10 ? 3 : 4;
+        
+        data.push({ date: date.toISOString(), count, level });
+      }
     }
-  }
+    return data;
+  })();
 
   const getLevelColor = (level: number) => {
     switch (level) {
@@ -460,23 +495,25 @@ function ActivityHeatmap({ stats }: { stats: DashboardStats | null }) {
     }
   };
 
+  const activeDays = finalActivityData.filter(d => d.count > 0).length;
+
   return (
     <div className="rounded-2xl p-5 sm:p-6 card-dark border border-border">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="heading-md font-semibold">Activity</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">{activityData.filter(d => d.count > 0).length} days active in the last 12 weeks</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{activeDays} days active in the last 12 weeks</p>
         </div>
         <Flame className="h-5 w-5 text-amber-500" />
       </div>
 
       <div className="overflow-x-auto pb-2">
         <div className="inline-grid grid-flow-col gap-1" style={{ gridTemplateRows: 'repeat(7, minmax(0, 1fr))' }}>
-          {activityData.map((day, i) => (
+          {finalActivityData.map((day, i) => (
             <div
               key={i}
               className={`h-3 w-3 rounded-sm ${getLevelColor(day.level)} transition-all hover:ring-2 hover:ring-primary cursor-pointer`}
-              title={`${day.date.toLocaleDateString()}: ${day.count} tasks`}
+              title={`${new Date(day.date).toLocaleDateString()}: ${day.count} tasks`}
             />
           ))}
         </div>
@@ -497,11 +534,12 @@ function ActivityHeatmap({ stats }: { stats: DashboardStats | null }) {
   );
 }
 
-function PerformanceChart() {
-  // Mock data for last 7 days
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const data = [65, 72, 68, 85, 78, 82, 88];
-  const maxValue = Math.max(...data);
+function PerformanceChart({ performanceTrend }: { performanceTrend?: { labels: string[]; values: number[]; change_percentage: number } }) {
+  // Use backend data if available, otherwise use mock data
+  const days = performanceTrend?.labels || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const data = performanceTrend?.values || [65, 72, 68, 85, 78, 82, 88];
+  const changePercentage = performanceTrend?.change_percentage ?? 12;
+  const maxValue = Math.max(...data, 1);
 
   return (
     <div className="space-y-4">
@@ -528,7 +566,9 @@ function PerformanceChart() {
           <div className="h-2 w-2 rounded-full bg-primary" />
           <span className="text-muted-foreground">Daily Score</span>
         </div>
-        <span className="font-semibold text-primary">+12% from last week</span>
+        <span className={`font-semibold ${changePercentage >= 0 ? 'text-primary' : 'text-destructive'}`}>
+          {changePercentage >= 0 ? '+' : ''}{changePercentage}% from last week
+        </span>
       </div>
     </div>
   );

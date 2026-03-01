@@ -88,7 +88,7 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  type: "learn" | "practice" | "review" | "interview" | "project" | "quiz";
+  type: "learn" | "practice" | "review" | "interview" | "project" | "quiz" | "theory";
   duration_minutes?: number;
   completed: boolean;
   resources?: ResourceRef[];
@@ -109,6 +109,7 @@ export interface DailyPlan {
   week: number;
   day: number;
   tasks: Task[];
+  focus_area?: string;
   created_at: string;
 }
 
@@ -197,6 +198,55 @@ export interface MilestoneItem {
   description?: string;
   target_week: number;
   status: string;
+}
+
+export interface WeeklyStats {
+  problems_solved: number;
+  study_hours: number;
+  xp_gained: number;
+  tasks_completed: number;
+}
+
+export interface PerformanceTrend {
+  labels: string[];
+  values: number[];
+  change_percentage: number;
+}
+
+export interface ActivityHeatmapData {
+  date: string;
+  count: number;
+  level: number;
+}
+
+export interface Achievement {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+  earned: boolean;
+  color: string;
+  progress?: number;
+  target?: number;
+}
+
+export interface CompleteDashboardStats {
+  total_xp: number;
+  xp_gained_today: number;
+  current_level: number;
+  xp_in_current_level: number;
+  xp_for_next_level: number;
+  streak_days: number;
+  personal_best_streak: number;
+  problems_solved: number;
+  completion_rate: number;
+  total_interviews: number;
+  average_interview_score: number;
+  weekly_stats: WeeklyStats;
+  performance_trend: PerformanceTrend;
+  activity_heatmap: ActivityHeatmapData[];
+  achievements: Achievement[];
+  skill_levels: Record<string, number>;
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
