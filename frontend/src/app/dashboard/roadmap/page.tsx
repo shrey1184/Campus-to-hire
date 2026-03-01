@@ -302,9 +302,9 @@ export default function RoadmapPage() {
                                     task.type === "learn"
                                       ? "bg-primary/20 text-primary"
                                       : task.type === "practice"
-                                      ? "bg-amber-500/10 text-amber-300"
+                                      ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
                                       : task.type === "interview"
-                                      ? "bg-orange-500/10 text-orange-300"
+                                      ? "bg-orange-500/15 text-orange-700 dark:text-orange-300"
                                       : "bg-secondary text-secondary-foreground"
                                   }`}>
                                     {task.type}

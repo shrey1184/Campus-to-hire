@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { authApi } from "@/lib/api";
 import { Sparkles, Mail, Lock, User, ArrowRight, Loader2 } from "lucide-react";
 import Logo from "@/components/Logo";
+import ThemeToggle from "@/components/ThemeToggle";
 import Link from "next/link";
 
 // Google icon SVG component
@@ -107,8 +108,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8 sm:py-12 page-base">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="mb-8 flex justify-center">
+        <div className="mb-8 flex items-center justify-center gap-3">
           <Logo size="lg" linked />
+          <ThemeToggle />
         </div>
 
         {/* Card */}

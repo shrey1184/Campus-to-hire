@@ -51,21 +51,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loading = Boolean(token && !user);
 
-  const login = async (newToken: string) => {
+  const login = useCallback(async (newToken: string) => {
     setToken(newToken);
     setTokenState(newToken);
     await fetchUser();
-  };
+  }, [fetchUser]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     clearToken();
     setTokenState(null);
     setUser(null);
-  };
+  }, []);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     await fetchUser();
-  };
+  }, [fetchUser]);
 
   return (
     <AuthContext.Provider value={{ user, token, loading, login, logout, refreshUser }}>

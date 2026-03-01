@@ -239,9 +239,9 @@ export const TARGET_COMPANIES = [
 
 export const TASK_TYPE_COLORS: Record<string, string> = {
   learn: "bg-primary/15 text-primary",
-  practice: "bg-amber-500/10 text-amber-300",
-  review: "bg-yellow-500/10 text-yellow-300",
-  interview: "bg-orange-500/10 text-orange-300",
-  project: "bg-rose-500/10 text-rose-300",
+  practice: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  review: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-300",
+  interview: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
+  project: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
   quiz: "bg-secondary text-secondary-foreground",
 };

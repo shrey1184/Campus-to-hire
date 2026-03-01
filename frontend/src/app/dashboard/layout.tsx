@@ -15,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import Logo from "@/components/Logo";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -100,6 +101,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <p className="truncate text-sm font-medium">{user.name}</p>
                 <p className="truncate text-xs text-muted-foreground">{user.email}</p>
               </div>
+              <ThemeToggle />
             </div>
             <button
               onClick={logout}
@@ -117,9 +119,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <Link href="/dashboard">
           <Logo size="sm" />
         </Link>
-        <Link href="/dashboard" className="rounded-full bg-primary/10 p-2 text-primary">
-          <User className="h-4 w-4" />
-        </Link>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <Link href="/dashboard" className="rounded-full bg-primary/10 p-2 text-primary">
+            <User className="h-4 w-4" />
+          </Link>
+        </div>
       </div>
 
       {/* Mobile bottom nav */}

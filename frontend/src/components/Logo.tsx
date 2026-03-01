@@ -27,7 +27,7 @@ function LogoMark({ svgSize }: { svgSize: number }) {
       {/* Outer ring */}
       <circle cx="14" cy="14" r="13" stroke="currentColor" strokeWidth="2.4" />
       {/* Punch-out circle → creates the crescent / C shape */}
-      <circle cx="17" cy="14" r="9" fill="hsl(var(--background))" />
+      <circle cx="17" cy="14" r="9" fill="var(--bg-base)" />
     </svg>
   );
 }

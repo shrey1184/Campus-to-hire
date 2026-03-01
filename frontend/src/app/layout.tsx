@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Quicksand, JetBrains_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+import { ThemeProvider } from "@/lib/theme-context";
 
 const quicksand = Quicksand({
   variable: "--font-quicksand",
@@ -36,12 +37,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" data-theme="light" suppressHydrationWarning>
       <body
         suppressHydrationWarning
         className={`${quicksand.variable} ${jetbrainsMono.variable} ${playfairDisplay.variable} antialiased`}
       >
-        <AuthProvider>{children}</AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

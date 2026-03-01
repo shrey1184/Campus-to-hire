@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Override Tailwind dark variant to use data-theme attribute */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* ================================================================
    CAMPUS-TO-HIRE — DESIGN SYSTEM
    ================================================================
@@ -8,7 +11,8 @@
    Every color, radius, shadow, and font references these tokens.
    ================================================================ */
 
-:root {
+:root,
+[data-theme="dark"] {
   /* ── Background Scale (dark → light) ────────────────────────── */
   --bg-base:       #080808;
   --bg-surface:    #111111;
@@ -58,7 +62,135 @@
   --shadow-lg:    0 8px 28px rgba(0, 0, 0, 0.5);
   --shadow-glow:  0 0 20px var(--accent-glow);
 
+  /* ── Hero-section (used in landing page) ────────────────────── */
+  --hero-bg:                #0a0a0a;
+  --hero-border:            #1f1f1f;
+  --hero-badge-bg:          white;
+  --hero-badge-text:        black;
+  --hero-subtitle-text:     #707070;
+  --hero-login-bg:          #1a1a1a;
+  --hero-login-border:      #2e2e2e;
+  --hero-login-text:        white;
+  --hero-cta-bg:            white;
+  --hero-cta-text:          black;
+  --hero-title-text:        white;
+  --hero-progress-track:    #252525;
+  --hero-progress-fill:     white;
+  --hero-dot-glow:          rgba(255,255,255,0.35);
+  --hero-card-bg:           white;
+  --hero-card-text:         black;
+  --hero-card-subtitle:     #4b5563;
+  --hero-card-btn-bg:       black;
+  --hero-card-btn-text:     white;
+  --hero-action-border:     #2e2e2e;
+  --hero-action-text:       white;
+  --hero-action-hover:      #1a1a1a;
+  --hero-bottom-border:     #1a1a1a;
+  --hero-grid-line:         rgba(255,255,255,0.04);
+
+  /* ── Glass Card ─────────────────────────────────────────────── */
+  --glass-bg:         rgba(17, 17, 17, 0.85);
+
+  /* ── Dot Grid ───────────────────────────────────────────────── */
+  --dot-grid-color:   rgba(255, 255, 255, 0.025);
+
+  /* ── Color Scheme ───────────────────────────────────────────── */
+  --color-scheme:     dark;
+
   /* ── Tailwind Token Mapping (DO NOT remove — Tailwind reads these) */
+  --background:           var(--bg-base);
+  --foreground:           var(--text-primary);
+  --card:                 var(--bg-surface);
+  --card-foreground:      var(--text-primary);
+  --primary:              var(--accent);
+  --primary-foreground:   var(--text-inverse);
+  --secondary:            var(--bg-elevated);
+  --secondary-foreground: var(--text-secondary);
+  --muted:                var(--bg-elevated);
+  --muted-foreground:     var(--text-muted);
+  --accent-color:         var(--bg-overlay);
+  --accent-foreground:    var(--text-primary);
+  --border:               var(--border-default);
+  --input:                var(--input-bg);
+  --ring:                 var(--ring-color);
+}
+
+/* ─── Light Theme ─────────────────────────────────────────────── */
+[data-theme="light"] {
+  /* ── Background Scale ───────────────────────────────────────── */
+  --bg-base:       #f8f9fa;
+  --bg-surface:    #ffffff;
+  --bg-elevated:   #f0f1f3;
+  --bg-overlay:    #e4e6e9;
+
+  /* ── Text Scale ─────────────────────────────────────────────── */
+  --text-primary:   #1a1a2e;
+  --text-secondary: #4a4a5a;
+  --text-muted:     #8a8a9a;
+  --text-inverse:   #ffffff;
+
+  /* ── Brand / Accent (matches "Campus for Hire" text color in light mode) ── */
+  --accent:         #1a1a2e;
+  --accent-hover:   #2d2d4a;
+  --accent-subtle:  rgba(26, 26, 46, 0.08);
+  --accent-glow:    rgba(26, 26, 46, 0.14);
+
+  /* ── Borders ────────────────────────────────────────────────── */
+  --border-default: #dfe1e6;
+  --border-hover:   #c1c4cb;
+  --border-active:  var(--accent);
+
+  /* ── Functional Colors ──────────────────────────────────────── */
+  --destructive:    #d93036;
+  --success:        #268c55;
+  --warning:        var(--accent);
+  --info:           #2563eb;
+
+  /* ── Input ──────────────────────────────────────────────────── */
+  --input-bg:       #f4f5f7;
+
+  /* ── Shadows (lighter for light theme) ──────────────────────── */
+  --shadow-sm:    0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md:    0 4px 14px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --shadow-lg:    0 8px 28px rgba(0, 0, 0, 0.10), 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-glow:  0 0 20px var(--accent-glow);
+
+  /* ── Hero-section (light version) ───────────────────────────── */
+  --hero-bg:                #ffffff;
+  --hero-border:            #dfe1e6;
+  --hero-badge-bg:          #1a1a2e;
+  --hero-badge-text:        #ffffff;
+  --hero-subtitle-text:     #6b7280;
+  --hero-login-bg:          #f0f1f3;
+  --hero-login-border:      #dfe1e6;
+  --hero-login-text:        #1a1a2e;
+  --hero-cta-bg:            #1a1a2e;
+  --hero-cta-text:          #ffffff;
+  --hero-title-text:        #1a1a2e;
+  --hero-progress-track:    #e4e6e9;
+  --hero-progress-fill:     #1a1a2e;
+  --hero-dot-glow:          rgba(26,26,46,0.25);
+  --hero-card-bg:           #f8f9fa;
+  --hero-card-text:         #1a1a2e;
+  --hero-card-subtitle:     #4a4a5a;
+  --hero-card-btn-bg:       #1a1a2e;
+  --hero-card-btn-text:     #ffffff;
+  --hero-action-border:     #dfe1e6;
+  --hero-action-text:       #1a1a2e;
+  --hero-action-hover:      #f0f1f3;
+  --hero-bottom-border:     #e4e6e9;
+  --hero-grid-line:         rgba(0,0,0,0.03);
+
+  /* ── Glass Card ─────────────────────────────────────────────── */
+  --glass-bg:         rgba(255, 255, 255, 0.85);
+
+  /* ── Dot Grid ───────────────────────────────────────────────── */
+  --dot-grid-color:   rgba(0, 0, 0, 0.03);
+
+  /* ── Color Scheme ───────────────────────────────────────────── */
+  --color-scheme:     light;
+
+  /* ── Tailwind Token Mapping ─────────────────────────────────── */
   --background:           var(--bg-base);
   --foreground:           var(--text-primary);
   --card:                 var(--bg-surface);
@@ -108,7 +240,7 @@ body {
   min-height: 100vh;
   background: var(--bg-base);
   color: var(--text-primary);
-  color-scheme: dark;
+  color-scheme: var(--color-scheme);
   font-family: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -121,7 +253,7 @@ body::before {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-image: radial-gradient(circle, var(--dot-grid-color) 1px, transparent 1px);
   background-size: 28px 28px;
 }
 
@@ -157,7 +289,7 @@ body::before {
 
 .card-glass {
   border: 1px solid var(--border-default);
-  background: rgba(17, 17, 17, 0.85);
+  background: var(--glass-bg);
   backdrop-filter: blur(12px);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
@@ -327,6 +459,13 @@ body::before {
 /* ─── Gradient Text ───────────────────────────────────────────── */
 .text-gradient {
   background: linear-gradient(135deg, var(--accent), #e8d5a3);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+[data-theme="light"] .text-gradient {
+  background: linear-gradient(135deg, #1a1a2e, #4a4a7a);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

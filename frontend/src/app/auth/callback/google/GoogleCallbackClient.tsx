@@ -6,51 +6,50 @@ import { useAuth } from "@/lib/auth-context";
 import { authApi } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 
-// Module-level flag survives component remounts
-let googleCallbackProcessed = false;
-
 export default function GoogleCallbackClient() {
   const router = useRouter();
   const { login } = useAuth();
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (googleCallbackProcessed) return;
-    googleCallbackProcessed = true;
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const errorParam = params.get("error");
+
+    if (errorParam) {
+      setError("Authentication failed. Please try again.");
+      setTimeout(() => router.push("/login"), 3000);
+      return;
+    }
+
+    if (!code) {
+      setError("No authorization code received.");
+      setTimeout(() => router.push("/login"), 3000);
+      return;
+    }
+
+    // Guard against React StrictMode double-invocation and same-session re-visits.
+    // Each Google authorization code is single-use, so we key by the code itself.
+    const sessionKey = `google_oauth_processed_${code}`;
+    if (sessionStorage.getItem(sessionKey)) return;
+    sessionStorage.setItem(sessionKey, "true");
 
     const handleCallback = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get("code");
-      const errorParam = params.get("error");
-
-      if (errorParam) {
-        setError("Authentication failed. Please try again.");
-        setTimeout(() => router.push("/login"), 3000);
-        return;
-      }
-
-      if (!code) {
-        setError("No authorization code received.");
-        setTimeout(() => router.push("/login"), 3000);
-        return;
-      }
-
       try {
         const authResult = await authApi.googleCallback(code);
         await login(authResult.access_token);
         router.push("/dashboard");
       } catch (err) {
+        // Remove the guard so the user can retry via a fresh OAuth flow
+        sessionStorage.removeItem(sessionKey);
         setError(err instanceof Error ? err.message : "Authentication failed.");
         setTimeout(() => router.push("/login"), 3000);
       }
     };
 
     handleCallback();
-
-    return () => {
-      googleCallbackProcessed = false;
-    };
-  }, [router, login]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
