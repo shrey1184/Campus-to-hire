@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
-import { profileApi, roadmapApi, dailyPlanApi } from "@/lib/api";
-import type { UserProgressStats, DashboardStats, Roadmap, DailyPlan } from "@/types";
+import { profileApi, roadmapApi, dailyPlanApi, dashboardApi } from "@/lib/api";
+import type { UserProgressStats, DashboardStats, Roadmap, DailyPlan, CompleteDashboardStats } from "@/types";
 import Link from "next/link";
 import { NumberTicker } from "@/components/magic/NumberTicker";
 import { BlurFade } from "@/components/magic/BlurFade";
@@ -35,6 +35,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [progress, setProgress] = useState<UserProgressStats | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [completeStats, setCompleteStats] = useState<CompleteDashboardStats | null>(null);
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
   const [todayPlan, setTodayPlan] = useState<DailyPlan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,12 +43,14 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const [p, s] = await Promise.all([
+        const [p, s, cs] = await Promise.all([
           profileApi.getProgress().catch(() => null),
           profileApi.getStats().catch(() => null),
+          dashboardApi.getCompleteStats().catch(() => null),
         ]);
         setProgress(p);
         setStats(s);
+        setCompleteStats(cs);
 
         const rm = await roadmapApi.getActive().catch(() => null);
         setRoadmap(rm);
@@ -487,6 +490,8 @@ function ActivityHeatmap({ stats }: { stats: DashboardStats | null }) {
     }
   };
 
+  const activeDays = finalActivityData.filter(d => d.count > 0).length;
+
   return (
     <div className="rounded-2xl border border-border p-5 card-dark sm:p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -562,7 +567,9 @@ function PerformanceChart() {
           <div className="h-2 w-2 rounded-full bg-primary" />
           <span className="text-muted-foreground">Daily Score</span>
         </div>
-        <span className="font-semibold text-primary">+12% from last week</span>
+        <span className={`font-semibold ${changePercentage >= 0 ? 'text-primary' : 'text-destructive'}`}>
+          {changePercentage >= 0 ? '+' : ''}{changePercentage}% from last week
+        </span>
       </div>
     </div>
   );

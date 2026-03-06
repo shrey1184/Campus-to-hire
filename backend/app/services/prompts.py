@@ -614,7 +614,7 @@ Candidate level: {user_level}
 {company_specific if company_specific else "Standard tech interview format — mix of DSA, CS fundamentals, and behavioral questions."}
 
 Begin by:
-1. Introduce yourself briefly as the interviewer (e.g., "Hi! I'm [Name], a Senior Engineer at {company_str}...")
+1. Introduce yourself briefly as the interviewer (e.g., "Hi! I'm Arjun Sharma, a Senior Engineer at {company_str}...")
 2. Ask the candidate to introduce themselves — their name, college, year, and why they're interested in this {role} role
 3. Keep it warm and professional
 

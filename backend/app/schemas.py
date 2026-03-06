@@ -69,6 +69,71 @@ class DashboardStats(BaseModel):
     upcoming_milestones: list[dict]
 
 
+class WeeklyStats(BaseModel):
+    """Stats for current week"""
+    problems_solved: int
+    study_hours: float
+    xp_gained: int
+    tasks_completed: int
+
+
+class PerformanceTrend(BaseModel):
+    """Performance trend data for charts"""
+    labels: list[str]
+    values: list[int]
+    change_percentage: float
+
+
+class ActivityHeatmapData(BaseModel):
+    """Activity heatmap data"""
+    date: str
+    count: int
+    level: int
+
+
+class Achievement(BaseModel):
+    """User achievement"""
+    id: str
+    icon: str
+    title: str
+    description: str
+    earned: bool
+    color: str
+    progress: Optional[int] = None
+    target: Optional[int] = None
+
+
+class CompleteDashboardStats(BaseModel):
+    """Complete dashboard statistics"""
+    # Top stats
+    total_xp: int
+    xp_gained_today: int
+    current_level: int
+    xp_in_current_level: int
+    xp_for_next_level: int
+    streak_days: int
+    personal_best_streak: int
+    problems_solved: int
+    completion_rate: float
+    total_interviews: int
+    average_interview_score: float
+    
+    # Weekly stats
+    weekly_stats: WeeklyStats
+    
+    # Performance trends (last 7 days)
+    performance_trend: PerformanceTrend
+    
+    # Activity heatmap (last 12 weeks)
+    activity_heatmap: list[ActivityHeatmapData]
+    
+    # Achievements
+    achievements: list[Achievement]
+    
+    # Skills
+    skill_levels: dict
+
+
 class AuthRegisterRequest(BaseModel):
     email: str
     password: str = Field(min_length=8, max_length=128)
