@@ -11,7 +11,7 @@ interface MovingBorderProps {
   containerClassName?: string;
   borderClassName?: string;
   borderWidth?: number;
-  as?: keyof React.JSX.IntrinsicElements | React.ComponentType<any>;
+  as?: keyof React.JSX.IntrinsicElements | React.ComponentType<React.HTMLAttributes<HTMLElement>>;
   colors?: string[];
 }
 

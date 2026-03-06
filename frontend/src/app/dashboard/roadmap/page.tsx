@@ -1,32 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { roadmapApi } from "@/lib/api";
-import type { Roadmap } from "@/types";
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { BlurFade } from "@/components/magic/BlurFade";
 import { ShimmerButton } from "@/components/magic/ShimmerButton";
+import { roadmapApi } from "@/lib/api";
+import type { Roadmap } from "@/types";
 import {
-  Map,
-  Loader2,
-  Sparkles,
+  BookOpen,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
-  CheckCircle2,
-  BookOpen,
   Code,
   FileText,
+  Loader2,
+  Map,
   MessageSquare,
+  Sparkles,
   Zap,
 } from "lucide-react";
 
-const TYPE_ICONS: Record<string, React.ReactNode> = {
-  learn: <BookOpen className="h-3.5 w-3.5" />,
-  practice: <Code className="h-3.5 w-3.5" />,
-  review: <FileText className="h-3.5 w-3.5" />,
-  interview: <MessageSquare className="h-3.5 w-3.5" />,
-  project: <Zap className="h-3.5 w-3.5" />,
-  quiz: <CheckCircle2 className="h-3.5 w-3.5" />,
+const TYPE_ICONS: Record<string, typeof BookOpen> = {
+  learn: BookOpen,
+  practice: Code,
+  review: FileText,
+  interview: MessageSquare,
+  project: Zap,
+  quiz: CheckCircle2,
+  theory: BookOpen,
 };
 
 export default function RoadmapPage() {
@@ -34,7 +35,6 @@ export default function RoadmapPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [generatingWeek, setGeneratingWeek] = useState<number | null>(null);
-  const [totalWeeksToGen, setTotalWeeksToGen] = useState(0);
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -45,9 +45,9 @@ export default function RoadmapPage() {
 
   async function loadRoadmap() {
     try {
-      const rm = await roadmapApi.getActive();
-      setRoadmap(rm);
-      setExpandedWeek(rm.current_week - 1);
+      const result = await roadmapApi.getActive();
+      setRoadmap(result);
+      setExpandedWeek(Math.max(result.current_week - 1, 0));
     } catch {
       setRoadmap(null);
     } finally {
@@ -58,381 +58,475 @@ export default function RoadmapPage() {
   async function handleGenerate() {
     setGenerating(true);
     setGeneratingWeek(null);
-    setTotalWeeksToGen(0);
     setError("");
+
     try {
-      const rm = await roadmapApi.generate();
-      setRoadmap(rm);
+      const initialRoadmap = await roadmapApi.generate();
+      setRoadmap(initialRoadmap);
       setExpandedWeek(0);
 
-      const pendingWeeks = rm.content.weeks.filter((w) => w.pending || !w.days?.length).map((w) => w.week);
+      const pendingWeeks = initialRoadmap.content.weeks
+        .filter((week) => week.pending || !week.days?.length)
+        .map((week) => week.week);
 
-      if (pendingWeeks.length > 0) {
-        setTotalWeeksToGen(pendingWeeks.length);
-        let latestRm = rm;
-        for (const weekNum of pendingWeeks) {
-          setGeneratingWeek(weekNum);
-          try {
-            latestRm = await roadmapApi.generateWeek(rm.id, weekNum);
-            setRoadmap(latestRm);
-          } catch (weekErr) {
-            console.error(`Failed to generate week ${weekNum}:`, weekErr);
-          }
+      let nextRoadmap = initialRoadmap;
+
+      for (const weekNumber of pendingWeeks) {
+        setGeneratingWeek(weekNumber);
+        try {
+          nextRoadmap = await roadmapApi.generateWeek(initialRoadmap.id, weekNumber);
+          setRoadmap(nextRoadmap);
+        } catch {
+          setError(`Failed to generate week ${weekNumber}. You can retry to continue.`);
         }
-        setGeneratingWeek(null);
-        setTotalWeeksToGen(0);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate roadmap");
+    } catch (generationError) {
+      setError(generationError instanceof Error ? generationError.message : "Failed to generate roadmap");
     } finally {
       setGenerating(false);
       setGeneratingWeek(null);
-      setTotalWeeksToGen(0);
     }
   }
+
+  const roadmapSummary = useMemo(() => {
+    if (!roadmap) {
+      return {
+        totalWeeks: 0,
+        currentWeek: 0,
+        totalTasks: 0,
+        completedTasks: 0,
+        progressPct: 0,
+      };
+    }
+
+    const allTasks = roadmap.content.weeks.flatMap((week) => week.days?.flatMap((day) => day.tasks || []) || []);
+    const completedTasks = allTasks.filter((task) => task.completed).length;
+    const totalTasks = allTasks.length;
+    const progressPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    return {
+      totalWeeks: roadmap.total_weeks,
+      currentWeek: roadmap.current_week,
+      totalTasks,
+      completedTasks,
+      progressPct,
+    };
+  }, [roadmap]);
 
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="rounded-xl px-8 py-6 text-center card-glass pulse-card">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary spinner-glow" />
-          <p className="mt-3 text-micro text-muted-foreground">Loading roadmap nodes...</p>
+        <div className="card-glass pulse-card rounded-xl px-8 py-6 text-center">
+          <Loader2 className="spinner-glow mx-auto h-8 w-8 animate-spin text-primary" />
+          <p className="text-micro mt-3 text-muted-foreground">Loading roadmap nodes...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="heading-lg font-bold">Your Learning Roadmap</h1>
-          <p className="body-text mt-1 text-muted-foreground">
-            {roadmap
-              ? `Target Role: ${roadmap.target_role?.replace(/_/g, " ") || "SDE at Amazon"} • Estimated Completion: ${roadmap.total_weeks} Weeks`
-              : "Personalized learning path generated by AI"}
-          </p>
-        </div>
-        <ShimmerButton onClick={handleGenerate} disabled={generating} className="w-full sm:w-auto">
-          {generating ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin spinner-glow" />
-              {generatingWeek ? `Generating Week ${generatingWeek}...` : "Creating Plan..."}
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4" />
-              {roadmap ? "Recalculate Schedule" : "Generate Roadmap"}
-            </>
-          )}
-        </ShimmerButton>
-      </div>
+    <motion.div
+      className="space-y-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.35 }}
+    >
+      <BlurFade delay={0.05}>
+        <section className="rounded-[28px] border border-[var(--accent)]/20 bg-[radial-gradient(circle_at_top_left,rgba(201,168,76,0.16),transparent_28%),linear-gradient(135deg,#101010,#080808)] p-6 sm:p-8">
+          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/25 bg-[var(--accent-subtle)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">
+                <Map className="h-3.5 w-3.5" />
+                Strategic roadmap
+              </div>
+              <div>
+                <h1 className="heading-xl">A strong roadmap removes guesswork from placement prep.</h1>
+                <p className="body-text mt-3 max-w-2xl text-[var(--text-secondary)]">
+                  This page is your sequence engine. Generate the plan, open the current week, then drill down into the exact day and task blocks you need to execute.
+                </p>
+              </div>
 
-      {error && <div className="rounded-lg bg-destructive/10 p-4 text-sm text-destructive">{error}</div>}
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Metric label="Total weeks" value={String(roadmapSummary.totalWeeks)} />
+                <Metric label="Current week" value={String(roadmapSummary.currentWeek)} />
+                <Metric label="Completion" value={`${roadmapSummary.progressPct}%`} />
+              </div>
 
-      {generating && generatingWeek && totalWeeksToGen > 0 && roadmap && (
-        <div className="rounded-xl p-4 card-dark">
-          <div className="mb-2 flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2 font-medium">
-              <Loader2 className="h-4 w-4 animate-spin text-primary spinner-glow" />
-              Generating Week {generatingWeek} of {roadmap.total_weeks}
-            </span>
-            <span className="tabular-nums text-muted-foreground">
-              {Math.round(((generatingWeek - 1) / roadmap.total_weeks) * 100)}%
-            </span>
-          </div>
-          <div className="h-2.5 rounded-full bg-muted">
-            <motion.div
-              className="h-2.5 rounded-full bg-gradient-to-r from-primary to-amber-600"
-              initial={{ width: 0 }}
-              animate={{ width: `${((generatingWeek - 1) / roadmap.total_weeks) * 100}%` }}
-              transition={{ type: "spring", stiffness: 120, damping: 20 }}
-            />
-          </div>
-        </div>
-      )}
-
-      {roadmap ? (
-        <div className="space-y-4">
-          <div className="relative">
-            <div className="absolute bottom-8 left-[19px] top-8 w-[2px] bg-border">
-              <motion.div
-                className="w-full origin-top bg-primary"
-                initial={{ scaleY: 0 }}
-                animate={{ scaleY: (roadmap.current_week - 1) / roadmap.content.weeks.length }}
-                transition={{ type: "spring", stiffness: 120, damping: 22 }}
-                style={{ height: "100%" }}
-              />
+              <div className="flex flex-wrap gap-3">
+                <ShimmerButton onClick={handleGenerate} disabled={generating} className="w-full sm:w-auto">
+                  {generating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {generatingWeek ? `Generating week ${generatingWeek}...` : "Creating roadmap..."}
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      {roadmap ? "Regenerate roadmap" : "Generate roadmap"}
+                    </>
+                  )}
+                </ShimmerButton>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              {roadmap.content.weeks?.map((week, index) => {
-                const isExpanded = expandedWeek === index;
-                const isCurrent = index === roadmap.current_week - 1;
-                const isPast = index < roadmap.current_week - 1;
-                const isPending = week.pending || !week.days?.length;
-                const isGeneratingThis = generatingWeek === week.week;
-                const allTasks = week.days?.flatMap((d) => d.tasks || []) || [];
-                const completedTasks = allTasks.filter((t) => t.completed).length;
-                const weekProgress = allTasks.length > 0 ? Math.round((completedTasks / allTasks.length) * 100) : 0;
+            <div className="card-glass rounded-[24px] border-white/10 p-5 sm:p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                Step-by-step usage
+              </p>
+              <div className="mt-4 space-y-3">
+                <GuideStep number="01" title="Generate the plan" description="Create the multi-week structure using your current profile and target role." />
+                <GuideStep number="02" title="Expand the active week" description="Open the current week first. That is where your execution focus should live." />
+                <GuideStep number="03" title="Go day by day" description="Use each day as a compact sprint. The roadmap matters only if the daily tasks get finished." />
+              </div>
+            </div>
+          </div>
+        </section>
+      </BlurFade>
 
-                return (
-                  <BlurFade key={index} delay={index * 0.1}>
+      {error ? (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          {error}
+        </div>
+      ) : null}
+
+      {generating && roadmap ? (
+        <BlurFade delay={0.08}>
+          <div className="card-dark rounded-[24px] p-5 sm:p-6">
+            <div className="mb-3 flex items-center justify-between text-sm">
+              <span className="text-[var(--text-secondary)]">
+                {generatingWeek ? `Generating week ${generatingWeek} of ${roadmap.total_weeks}` : "Preparing roadmap structure"}
+              </span>
+              <span className="font-semibold text-[var(--text-primary)]">
+                {generatingWeek ? `${Math.round(((generatingWeek - 1) / roadmap.total_weeks) * 100)}%` : "Starting"}
+              </span>
+            </div>
+            <div className="h-3 overflow-hidden rounded-full bg-white/5">
+              <motion.div
+                className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[#f2d78a]"
+                initial={{ width: 0 }}
+                animate={{ width: `${generatingWeek ? ((generatingWeek - 1) / roadmap.total_weeks) * 100 : 12}%` }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+              />
+            </div>
+          </div>
+        </BlurFade>
+      ) : null}
+
+      {roadmap ? (
+        <section className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+          <BlurFade delay={0.12}>
+            <div className="card-dark rounded-[24px] p-5 sm:p-6">
+              <div className="mb-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                  Plan health
+                </p>
+                <h2 className="heading-md mt-1">Current roadmap snapshot</h2>
+              </div>
+
+              <div className="space-y-3">
+                <SnapshotRow label="Target role" value={roadmap.target_role?.replace(/_/g, " ") || "Not specified"} />
+                <SnapshotRow label="Completed tasks" value={`${roadmapSummary.completedTasks}/${roadmapSummary.totalTasks}`} />
+                <SnapshotRow label="Active position" value={`Week ${roadmap.current_week}, Day ${roadmap.current_day}`} />
+                <SnapshotRow label="Estimated length" value={`${roadmap.total_weeks} weeks`} />
+              </div>
+
+              <div className="mt-5">
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="text-[var(--text-secondary)]">Overall completion</span>
+                  <span className="font-semibold text-[var(--text-primary)]">{roadmapSummary.progressPct}%</span>
+                </div>
+                <div className="h-3 overflow-hidden rounded-full bg-white/5">
+                  <motion.div
+                    className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[#f2d78a]"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${roadmapSummary.progressPct}%` }}
+                    transition={{ duration: 0.4, ease: "easeOut" }}
+                  />
+                </div>
+              </div>
+            </div>
+          </BlurFade>
+
+          <BlurFade delay={0.16}>
+            <div className="card-dark rounded-[24px] p-5 sm:p-6">
+              <div className="mb-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                  Step 1 to {roadmap.total_weeks}
+                </p>
+                <h2 className="heading-md mt-1">Open the roadmap timeline</h2>
+              </div>
+
+              <div className="space-y-4">
+                {roadmap.content.weeks.map((week, index) => {
+                  const isExpanded = expandedWeek === index;
+                  const isCurrent = week.week === roadmap.current_week;
+                  const isPast = week.week < roadmap.current_week;
+                  const isPending = week.pending || !week.days?.length;
+                  const weekTasks = week.days?.flatMap((day) => day.tasks || []) || [];
+                  const completedTasks = weekTasks.filter((task) => task.completed).length;
+                  const weekProgress = weekTasks.length > 0 ? Math.round((completedTasks / weekTasks.length) * 100) : 0;
+
+                  return (
                     <div
-                      className={`relative rounded-2xl border transition ${
+                      key={week.week}
+                      className={`rounded-[24px] border ${
                         isCurrent
-                          ? "border-primary/50 bg-gradient-to-br from-primary/10 to-transparent"
+                          ? "border-[var(--accent)]/30 bg-[var(--accent-subtle)]"
                           : isPast
-                            ? "border-primary/30 bg-primary/5"
+                            ? "border-white/8 bg-white/[0.03]"
                             : isPending
-                              ? "border-border/30 bg-card/50 opacity-75"
-                              : "border-border/50 bg-card"
+                              ? "border-white/6 bg-white/[0.01] opacity-75"
+                              : "border-white/8 bg-white/[0.02]"
                       }`}
                     >
                       <button
                         onClick={() => !isPending && setExpandedWeek(isExpanded ? null : index)}
                         disabled={isPending}
-                        className="flex w-full items-start gap-4 p-5 text-left disabled:cursor-default"
+                        className="flex w-full items-start gap-4 p-5 text-left"
                       >
-                        <div className="relative flex-shrink-0">
-                          <div
-                            className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold transition ${
-                              isPast
-                                ? "bg-primary text-primary-foreground"
-                                : isCurrent
-                                  ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
-                                  : isPending
-                                    ? "bg-muted/50 text-muted-foreground"
-                                    : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            {isGeneratingThis ? (
-                              <Loader2 className="h-5 w-5 animate-spin" />
-                            ) : isPast ? (
-                              <CheckCircle2 className="h-5 w-5" />
-                            ) : (
-                              index + 1
-                            )}
-                          </div>
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/8 bg-black/25 font-semibold text-[var(--accent)]">
+                          {isPending && generatingWeek === week.week ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : isPast ? (
+                            <CheckCircle2 className="h-5 w-5" />
+                          ) : (
+                            week.week
+                          )}
                         </div>
 
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                  Weeks {week.week || index + 1}
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                                  Week {week.week}
                                 </span>
-                                {isCurrent && (
-                                  <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
-                                    CURRENT
+                                {isCurrent ? (
+                                  <span className="rounded-full border border-[var(--accent)]/25 bg-black/25 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">
+                                    Current
                                   </span>
-                                )}
+                                ) : null}
                               </div>
-                              <p className="mt-1 text-base font-semibold sm:text-lg">{week.title}</p>
-                              {week.description && <p className="mt-1 text-sm text-muted-foreground">{week.description}</p>}
-                              {isPending && !isGeneratingThis && (
-                                <p className="mt-1 text-xs italic text-muted-foreground/60">Waiting to generate...</p>
-                              )}
-                              {isGeneratingThis && <p className="mt-1 text-xs italic text-primary/80">Generating tasks...</p>}
+                              <h3 className="mt-2 text-base font-semibold text-[var(--text-primary)]">{week.title}</h3>
+                              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                                {week.description || "Structured learning, deliberate practice, and interview-oriented reinforcement."}
+                              </p>
                             </div>
 
-                            <div className="flex items-center gap-2">
-                              {!isPending && (
-                                <>
-                                  {allTasks.length > 0 && (
-                                    <div className="hidden sm:block">
-                                      <div className="mb-1 text-xs text-muted-foreground">Progress</div>
-                                      <div className="flex items-center gap-2">
-                                        <div className="h-2 w-24 rounded-full bg-muted">
-                                          <motion.div
-                                            className="h-2 rounded-full bg-primary"
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${weekProgress}%` }}
-                                            transition={{ type: "spring", stiffness: 120, damping: 20, delay: index * 0.06 }}
-                                          />
-                                        </div>
-                                        <span className="text-xs font-semibold tabular-nums">{weekProgress}%</span>
-                                      </div>
-                                    </div>
-                                  )}
-                                  {isExpanded ? (
-                                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                                  ) : (
-                                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                                  )}
-                                </>
-                              )}
-                            </div>
+                            {!isPending ? (
+                              <div className="flex shrink-0 items-center gap-3">
+                                <span className="hidden text-sm font-semibold text-[var(--text-secondary)] sm:inline">
+                                  {weekProgress}%
+                                </span>
+                                {isExpanded ? (
+                                  <ChevronDown className="h-5 w-5 text-[var(--text-muted)]" />
+                                ) : (
+                                  <ChevronRight className="h-5 w-5 text-[var(--text-muted)]" />
+                                )}
+                              </div>
+                            ) : null}
                           </div>
+
+                          {!isPending ? (
+                            <div className="mt-4">
+                              <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                                <motion.div
+                                  className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[#f2d78a]"
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${weekProgress}%` }}
+                                  transition={{ duration: 0.35, ease: "easeOut" }}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="mt-3 text-sm text-[var(--text-muted)]">
+                              {generatingWeek === week.week ? "Generating tasks for this week..." : "Waiting to generate week details."}
+                            </p>
+                          )}
                         </div>
                       </button>
 
                       <AnimatePresence initial={false}>
-                        {isExpanded && !isPending && week.days && (
+                        {isExpanded && !isPending && week.days ? (
                           <motion.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: "auto", opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            transition={{ type: "spring", stiffness: 200, damping: 24 }}
-                            className="overflow-hidden border-t border-border/30"
+                            transition={{ duration: 0.25 }}
+                            className="overflow-hidden border-t border-white/8"
                           >
-                            <div className="space-y-5 px-5 pb-5 pt-4">
-                              <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Modules</h4>
+                            <div className="space-y-3 p-5 pt-4">
                               {week.days.map((day, dayIndex) => {
-                                const dayKey = `w${index}-d${dayIndex}`;
+                                const dayKey = `${week.week}-${day.day}-${dayIndex}`;
                                 const isDayExpanded = expandedDay === dayKey;
-                                const allTasksCompleted = day.tasks?.length > 0 && day.tasks.every((t) => t.completed);
-                                const someTasksCompleted = day.tasks?.some((t) => t.completed);
-                                const completedCount = day.tasks?.filter((t) => t.completed).length || 0;
                                 const totalTasks = day.tasks?.length || 0;
+                                const completedTasksForDay = day.tasks?.filter((task) => task.completed).length || 0;
 
                                 return (
-                                  <motion.div
-                                    key={dayIndex}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: dayIndex * 0.05 }}
-                                    className="space-y-3"
-                                  >
+                                  <div key={dayKey} className="rounded-[20px] border border-white/8 bg-black/15">
                                     <button
-                                      className="m-[-0.5rem] flex w-full items-center gap-3 rounded-lg p-2 text-left transition hover:bg-muted/30"
                                       onClick={() => setExpandedDay(isDayExpanded ? null : dayKey)}
+                                      className="flex w-full items-center gap-3 p-4 text-left"
                                     >
-                                      <div
-                                        className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                                          allTasksCompleted
-                                            ? "bg-primary text-primary-foreground"
-                                            : someTasksCompleted
-                                              ? "border-2 border-primary bg-transparent text-primary"
-                                              : "bg-muted text-muted-foreground"
-                                        }`}
-                                      >
-                                        {allTasksCompleted ? <CheckCircle2 className="h-4 w-4" /> : dayIndex + 1}
+                                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5 text-sm font-semibold text-[var(--accent)]">
+                                        {day.day || dayIndex + 1}
                                       </div>
                                       <div className="min-w-0 flex-1">
-                                        <p className="text-sm font-semibold">{day.title || `Day ${day.day || dayIndex + 1}`}</p>
-                                        {totalTasks > 0 && (
-                                          <p className="text-xs text-muted-foreground">
-                                            {completedCount}/{totalTasks} tasks completed
-                                          </p>
-                                        )}
+                                        <p className="text-sm font-semibold text-[var(--text-primary)]">
+                                          {day.title || `Day ${day.day || dayIndex + 1}`}
+                                        </p>
+                                        <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                                          {completedTasksForDay}/{totalTasks} tasks completed
+                                        </p>
                                       </div>
-                                      <div className="flex items-center gap-2">
-                                        {totalTasks > 0 && (
-                                          <span className="tabular-nums text-xs text-muted-foreground">
-                                            {day.tasks.reduce((sum, t) => sum + (t.duration_minutes || 0), 0)}m
-                                          </span>
-                                        )}
-                                        {isDayExpanded ? (
-                                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                        ) : (
-                                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                        )}
-                                      </div>
+                                      {isDayExpanded ? (
+                                        <ChevronDown className="h-4 w-4 text-[var(--text-muted)]" />
+                                      ) : (
+                                        <ChevronRight className="h-4 w-4 text-[var(--text-muted)]" />
+                                      )}
                                     </button>
 
                                     <AnimatePresence initial={false}>
-                                      {isDayExpanded && day.tasks && (
+                                      {isDayExpanded && day.tasks ? (
                                         <motion.div
                                           initial={{ height: 0, opacity: 0 }}
                                           animate={{ height: "auto", opacity: 1 }}
                                           exit={{ height: 0, opacity: 0 }}
-                                          transition={{ type: "spring", stiffness: 220, damping: 22 }}
-                                          className="overflow-hidden"
+                                          transition={{ duration: 0.22 }}
+                                          className="overflow-hidden border-t border-white/8"
                                         >
-                                          <div className="ml-9 space-y-3 border-l-2 border-border pl-4">
-                                            {day.tasks.map((task, ti) => (
-                                              <motion.div
-                                                key={task.id || ti}
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: ti * 0.05 }}
-                                                className="space-y-1.5"
-                                              >
-                                                <div className="flex items-start gap-2 text-sm">
-                                                  <div className={`mt-0.5 ${task.completed ? "text-primary" : "text-muted-foreground"}`}>
-                                                    {task.completed ? (
-                                                      <CheckCircle2 className="h-3.5 w-3.5" />
-                                                    ) : (
-                                                      TYPE_ICONS[task.type] || <BookOpen className="h-3.5 w-3.5" />
-                                                    )}
-                                                  </div>
-                                                  <div className="min-w-0 flex-1">
-                                                    <p className={`font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`}>
-                                                      {task.title}
-                                                    </p>
-                                                    {task.description && (
-                                                      <p className="mt-0.5 text-xs text-muted-foreground">{task.description}</p>
-                                                    )}
-                                                  </div>
-                                                  <div className="flex flex-shrink-0 items-center gap-2">
-                                                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium capitalize">
-                                                      {task.type}
-                                                    </span>
-                                                    {task.duration_minutes && (
-                                                      <span className="whitespace-nowrap tabular-nums text-xs text-muted-foreground">
-                                                        {task.duration_minutes}m
-                                                      </span>
-                                                    )}
+                                          <div className="space-y-3 p-4">
+                                            {day.tasks.map((task, taskIndex) => {
+                                              const Icon = TYPE_ICONS[task.type] || BookOpen;
+
+                                              return (
+                                                <div
+                                                  key={`${dayKey}-${task.id || taskIndex}`}
+                                                  className={`rounded-2xl border p-4 ${
+                                                    task.completed
+                                                      ? "border-[var(--accent)]/25 bg-[var(--accent-subtle)]"
+                                                      : "border-white/8 bg-white/[0.02]"
+                                                  }`}
+                                                >
+                                                  <div className="flex items-start gap-3">
+                                                    <div className="rounded-xl bg-white/5 p-2 text-[var(--accent)]">
+                                                      <Icon className="h-4 w-4" />
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                      <div className="flex flex-wrap items-center gap-2">
+                                                        <p className={`text-sm font-semibold ${task.completed ? "line-through text-[var(--text-secondary)]" : "text-[var(--text-primary)]"}`}>
+                                                          {task.title}
+                                                        </p>
+                                                        <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                                                          {task.type}
+                                                        </span>
+                                                      </div>
+                                                      {task.description ? (
+                                                        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{task.description}</p>
+                                                      ) : null}
+                                                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                                                        {task.duration_minutes ? (
+                                                          <span className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-[var(--text-secondary)]">
+                                                            {task.duration_minutes} min
+                                                          </span>
+                                                        ) : null}
+                                                        {task.resources?.map((resource, resourceIndex) =>
+                                                          resource.url ? (
+                                                            <a
+                                                              key={`${dayKey}-${taskIndex}-${resourceIndex}`}
+                                                              href={resource.url}
+                                                              target="_blank"
+                                                              rel="noopener noreferrer"
+                                                              className="link-glow rounded-full border border-white/10 px-2.5 py-1 text-xs"
+                                                            >
+                                                              {resource.title}
+                                                            </a>
+                                                          ) : (
+                                                            <span
+                                                              key={`${dayKey}-${taskIndex}-${resourceIndex}`}
+                                                              className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-[var(--text-secondary)]"
+                                                            >
+                                                              {resource.title}
+                                                            </span>
+                                                          ),
+                                                        )}
+                                                      </div>
+                                                    </div>
                                                   </div>
                                                 </div>
-                                                {task.resources && task.resources.length > 0 && (
-                                                  <div className="ml-5 flex flex-wrap gap-2">
-                                                    {task.resources.map((res, ri) =>
-                                                      res.url ? (
-                                                        <a
-                                                          key={ri}
-                                                          href={res.url}
-                                                          target="_blank"
-                                                          rel="noopener noreferrer"
-                                                          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-[11px] font-medium text-primary transition hover:bg-primary/10"
-                                                        >
-                                                          <BookOpen className="h-3 w-3" />
-                                                          {res.title}
-                                                        </a>
-                                                      ) : (
-                                                        <span
-                                                          key={ri}
-                                                          className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
-                                                        >
-                                                          <BookOpen className="h-3 w-3" />
-                                                          {res.title}
-                                                        </span>
-                                                      ),
-                                                    )}
-                                                  </div>
-                                                )}
-                                              </motion.div>
-                                            ))}
+                                              );
+                                            })}
                                           </div>
                                         </motion.div>
-                                      )}
+                                      ) : null}
                                     </AnimatePresence>
-                                  </motion.div>
+                                  </div>
                                 );
                               })}
                             </div>
                           </motion.div>
-                        )}
+                        ) : null}
                       </AnimatePresence>
                     </div>
-                  </BlurFade>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </div>
+          </BlurFade>
+        </section>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-16 text-center card-dark">
-          <Map className="mb-4 h-12 w-12 text-muted-foreground" />
-          <h2 className="mb-2 text-xl font-semibold">No Roadmap Yet</h2>
-          <p className="mb-6 max-w-md text-sm text-muted-foreground">
-            Click &quot;Generate Roadmap&quot; to create a personalized learning path based on your profile,
-            target role, and skill level.
+        <div className="rounded-[28px] border border-dashed border-white/10 bg-white/[0.02] px-6 py-16 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent-subtle)] text-[var(--accent)]">
+            <Map className="h-6 w-6" />
+          </div>
+          <h2 className="heading-lg">No roadmap yet</h2>
+          <p className="body-text mx-auto mt-2 max-w-2xl text-[var(--text-secondary)]">
+            Generate a personalized roadmap to turn your target role into a week-by-week preparation system.
           </p>
         </div>
       )}
     </motion.div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{value}</p>
+    </div>
+  );
+}
+
+function GuideStep({
+  number,
+  title,
+  description,
+}: {
+  number: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-4">
+      <div className="flex items-start gap-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-black/25 text-sm font-semibold text-[var(--accent)]">
+          {number}
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h3>
+          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{description}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SnapshotRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3">
+      <span className="text-sm text-[var(--text-secondary)]">{label}</span>
+      <span className="max-w-[12rem] truncate text-sm font-semibold text-[var(--text-primary)]">{value}</span>
+    </div>
   );
 }

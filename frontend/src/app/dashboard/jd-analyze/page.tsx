@@ -1,20 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { jdApi } from "@/lib/api";
-import type { JDAnalysis } from "@/types";
+import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { BlurFade } from "@/components/magic/BlurFade";
 import { ShimmerButton } from "@/components/magic/ShimmerButton";
+import { jdApi } from "@/lib/api";
+import type { JDAnalysis } from "@/types";
 import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  Clipboard,
   FileSearch,
   Loader2,
-  AlertTriangle,
-  CheckCircle2,
-  ArrowUpCircle,
-  ChevronRight,
   Sparkles,
-  Clipboard,
+  Target,
 } from "lucide-react";
 
 const SAMPLE_JD = `Software Development Engineer (SDE-1) at Amazon
@@ -40,10 +40,10 @@ export default function JDAnalyzePage() {
   const [analysis, setAnalysis] = useState<JDAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [focused, setFocused] = useState(false);
 
   async function handleAnalyze() {
     if (!jdText.trim()) return;
+
     setLoading(true);
     setError("");
     setAnalysis(null);
@@ -51,237 +51,405 @@ export default function JDAnalyzePage() {
     try {
       const result = await jdApi.analyze(jdText.trim());
       setAnalysis(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Analysis failed");
+    } catch (analysisError) {
+      setError(analysisError instanceof Error ? analysisError.message : "Analysis failed");
     } finally {
       setLoading(false);
     }
   }
 
-  function useSample() {
-    setJdText(SAMPLE_JD);
-    setAnalysis(null);
-  }
+  const summary = useMemo(() => {
+    if (!analysis) {
+      return {
+        matchedSkills: 0,
+        totalRequired: 0,
+        gapCount: 0,
+        matchScore: 0,
+      };
+    }
 
-  const priorityColors: Record<string, string> = {
-    critical: "text-primary bg-primary/20",
-    high: "text-amber-700 dark:text-amber-300 bg-amber-500/15",
-    medium: "text-yellow-700 dark:text-yellow-300 bg-yellow-500/15",
-    low: "text-orange-700 dark:text-orange-300 bg-amber-500/15",
-  };
+    const totalRequired = analysis.required_skills.length;
+    const gapCount = analysis.gap_analysis.length;
+    const matchedSkills = Math.max(totalRequired - gapCount, 0);
+    const matchScore = totalRequired > 0 ? Math.round((matchedSkills / totalRequired) * 100) : 0;
 
-  const getLevelScore = (level: string | number) => {
-    if (typeof level === "number") return Math.min(100, Math.max(0, level * 20));
-    const normalized = level.toLowerCase();
-    if (normalized.includes("advanced")) return 100;
-    if (normalized.includes("intermediate")) return 70;
-    if (normalized.includes("basic")) return 40;
-    if (normalized.includes("beginner")) return 25;
-    const parsed = Number.parseInt(level, 10);
-    return Number.isNaN(parsed) ? 50 : Math.min(100, Math.max(0, parsed * 20));
+    return {
+      matchedSkills,
+      totalRequired,
+      gapCount,
+      matchScore,
+    };
+  }, [analysis]);
+
+  const priorityClasses: Record<string, string> = {
+    critical: "border-red-500/20 bg-red-500/10 text-red-200",
+    high: "border-amber-500/20 bg-amber-500/10 text-amber-100",
+    medium: "border-yellow-500/20 bg-yellow-500/10 text-yellow-100",
+    low: "border-white/10 bg-white/[0.04] text-[var(--text-secondary)]",
   };
 
   return (
-    <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
-      <div>
-        <h1 className="heading-lg flex items-center gap-2 font-bold">
-          <FileSearch className="h-6 w-6 text-primary" />
-          JD Skill-Gap Analysis
-        </h1>
-        <p className="body-text mt-1 text-muted-foreground">
-          Paste a job description to see how your skills match up
-        </p>
-      </div>
+    <motion.div
+      className="space-y-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.35 }}
+    >
+      <BlurFade delay={0.05}>
+        <section className="rounded-[28px] border border-[var(--accent)]/20 bg-[radial-gradient(circle_at_top_left,rgba(201,168,76,0.16),transparent_28%),linear-gradient(135deg,#101010,#080808)] p-6 sm:p-8">
+          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/25 bg-[var(--accent-subtle)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">
+                <FileSearch className="h-3.5 w-3.5" />
+                JD reasoning engine
+              </div>
+              <div>
+                <h1 className="heading-xl">Read the role, compare the gaps, then act on the delta.</h1>
+                <p className="body-text mt-3 max-w-2xl text-[var(--text-secondary)]">
+                  This page is intentionally sequential: paste the job description, let the AI extract expectations, then convert the missing skills into your next roadmap decisions.
+                </p>
+              </div>
 
-      <div className="rounded-2xl p-5 card-dark sm:p-6">
-        <div className="mb-3 flex items-center justify-between">
-          <label className="text-sm font-semibold">Job Description</label>
-          <button onClick={useSample} className="link-glow flex items-center gap-1 text-xs">
-            <Clipboard className="h-3 w-3" />
-            Use Sample JD
-          </button>
-        </div>
-        <motion.div
-          animate={{
-            boxShadow: focused ? "0 0 0 3px var(--accent-subtle), 0 0 20px var(--accent-glow)" : "0 0 0 0 transparent",
-          }}
-          transition={{ duration: 0.2 }}
-          className="rounded-lg"
-        >
-          <textarea
-            value={jdText}
-            onChange={(e) => setJdText(e.target.value)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            placeholder="Paste the full job description here..."
-            rows={10}
-            className="input-dark w-full resize-none rounded-lg px-4 py-3 text-sm outline-none"
-            style={{ borderColor: focused ? "var(--accent)" : undefined }}
-          />
-        </motion.div>
-        <div className="mt-3">
-          <ShimmerButton onClick={handleAnalyze} disabled={loading || !jdText.trim()} className="w-full">
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin spinner-glow" />
-                Analyzing with AI...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                Analyze Job Description
-              </>
-            )}
-          </ShimmerButton>
-        </div>
-      </div>
-
-      {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-          <AlertTriangle className="h-4 w-4" />
-          {error}
-        </div>
-      )}
-
-      <AnimatePresence mode="wait">
-        {analysis && (
-          <motion.div
-            key="analysis"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            transition={{ duration: 0.35 }}
-            className="space-y-6"
-          >
-            <div className="rounded-2xl p-5 card-dark sm:p-6">
-              <h2 className="mb-4 heading-md font-semibold">Analysis Summary</h2>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                <div>
-                  <p className="text-xs text-muted-foreground">Role</p>
-                  <p className="font-semibold capitalize">{analysis.role}</p>
-                </div>
-                {analysis.company && (
-                  <div>
-                    <p className="text-xs text-muted-foreground">Company</p>
-                    <p className="font-semibold">{analysis.company}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-xs text-muted-foreground">Required Skills</p>
-                  <p className="font-semibold">{analysis.required_skills.length}</p>
-                </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Metric label="Match score" value={analysis ? `${summary.matchScore}%` : "--"} />
+                <Metric label="Required skills" value={analysis ? String(summary.totalRequired) : "--"} />
+                <Metric label="Gap count" value={analysis ? String(summary.gapCount) : "--"} />
               </div>
             </div>
 
-            <div className="rounded-2xl p-5 card-dark sm:p-6">
-              <h2 className="mb-4 heading-md font-semibold">Required Skills</h2>
-              <div className="space-y-2">
-                {analysis.required_skills.map((skill, i) => (
-                  <BlurFade key={`${skill.name}-${i}`} delay={i * 0.05}>
-                    <div className="flex flex-col gap-2 rounded-lg border border-border/30 p-3 sm:flex-row sm:items-center sm:justify-between">
-                      <span className="text-sm font-medium">{skill.name}</span>
+            <div className="card-glass rounded-[24px] border-white/10 p-5 sm:p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                Step-by-step
+              </p>
+              <div className="mt-4 space-y-3">
+                <GuideStep number="01" title="Paste the JD" description="Use the full description, not only the bullet list, so the role intent is preserved." />
+                <GuideStep number="02" title="Inspect the gaps" description="The missing skills matter more than the skills you already have." />
+                <GuideStep number="03" title="Feed it back" description="Use the recommendations to update your roadmap and mock-interview focus." />
+              </div>
+            </div>
+          </div>
+        </section>
+      </BlurFade>
+
+      <section className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+        <BlurFade delay={0.1}>
+          <div className="card-dark rounded-[24px] p-5 sm:p-6">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                  Step 1
+                </p>
+                <h2 className="heading-md mt-1">Input the job description</h2>
+              </div>
+              <button onClick={() => setJdText(SAMPLE_JD)} className="link-glow inline-flex items-center gap-2 text-sm">
+                <Clipboard className="h-4 w-4" />
+                Use sample
+              </button>
+            </div>
+
+            <textarea
+              value={jdText}
+              onChange={(event) => setJdText(event.target.value)}
+              placeholder="Paste the complete job description here..."
+              rows={16}
+              className="input-dark w-full resize-none rounded-[22px] px-4 py-4 text-sm leading-6 outline-none"
+            />
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <ShimmerButton onClick={handleAnalyze} disabled={loading || !jdText.trim()} className="w-full sm:w-auto">
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Analyzing JD...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Analyze job description
+                  </>
+                )}
+              </ShimmerButton>
+            </div>
+
+            {error ? (
+              <div className="mt-4 flex items-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+                <AlertTriangle className="h-4 w-4" />
+                {error}
+              </div>
+            ) : null}
+          </div>
+        </BlurFade>
+
+        <BlurFade delay={0.14}>
+          <div className="card-dark rounded-[24px] p-5 sm:p-6">
+            <div className="mb-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                Step 2
+              </p>
+              <h2 className="heading-md mt-1">Read the result summary</h2>
+            </div>
+
+            {analysis ? (
+              <div className="space-y-4">
+                <div className="rounded-[22px] border border-[var(--accent)]/20 bg-[var(--accent-subtle)] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">{analysis.role}</p>
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                        {analysis.company ? `${analysis.company} role detected` : "Company not explicitly identified"}
+                      </p>
+                    </div>
+                    <div className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-sm font-semibold text-[var(--accent)]">
+                      {summary.matchScore}% match
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <SummaryRow label="Matched skills" value={`${summary.matchedSkills}/${summary.totalRequired}`} />
+                  <SummaryRow label="Missing or weak areas" value={String(summary.gapCount)} />
+                  <SummaryRow label="Recommendations" value={String(analysis.recommendations.length)} />
+                  <SummaryRow label="Extracted skills" value={String(analysis.required_skills.length)} />
+                </div>
+
+                <div className="rounded-[22px] border border-white/8 bg-white/[0.02] p-4">
+                  <div className="mb-3 flex items-center justify-between text-sm">
+                    <span className="text-[var(--text-secondary)]">Estimated fit</span>
+                    <span className="font-semibold text-[var(--text-primary)]">{summary.matchScore}%</span>
+                  </div>
+                  <div className="h-3 overflow-hidden rounded-full bg-white/5">
+                    <motion.div
+                      className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[#f2d78a]"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${summary.matchScore}%` }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <EmptyPanel
+                title="No analysis yet"
+                description="Run the analyzer to convert the JD into structured requirements, gap analysis, and recommendations."
+              />
+            )}
+          </div>
+        </BlurFade>
+      </section>
+
+      <AnimatePresence mode="wait">
+        {analysis ? (
+          <motion.section
+            key="analysis"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.25 }}
+            className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]"
+          >
+            <div className="card-dark rounded-[24px] p-5 sm:p-6">
+              <div className="mb-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                  Step 3
+                </p>
+                <h2 className="heading-md mt-1">Inspect required skills</h2>
+              </div>
+
+              <div className="space-y-3">
+                {analysis.required_skills.map((skill, index) => (
+                  <motion.div
+                    key={`${skill.name}-${index}`}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.03 }}
+                    className="rounded-[20px] border border-white/8 bg-white/[0.02] p-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">{skill.name}</p>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs capitalize text-muted-foreground">{skill.level}</span>
-                        {skill.importance && (
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                              priorityColors[skill.importance.toLowerCase()] || "bg-secondary text-secondary-foreground"
-                            }`}
-                          >
+                        <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                          {skill.level}
+                        </span>
+                        {skill.importance ? (
+                          <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${priorityClasses[skill.importance.toLowerCase()] || priorityClasses.low}`}>
                             {skill.importance}
                           </span>
-                        )}
+                        ) : null}
                       </div>
                     </div>
-                  </BlurFade>
+                  </motion.div>
                 ))}
               </div>
             </div>
 
-            {analysis.gap_analysis.length > 0 && (
-              <div className="rounded-2xl p-5 card-dark sm:p-6">
-                <h2 className="heading-md mb-4 flex items-center gap-2 font-semibold">
-                  <ArrowUpCircle className="h-5 w-5 text-primary" />
-                  Skill Gaps
-                </h2>
+            <div className="space-y-4">
+              <div className="card-dark rounded-[24px] p-5 sm:p-6">
+                <div className="mb-5 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                      Gap analysis
+                    </p>
+                    <h2 className="heading-md mt-1">What still needs work</h2>
+                  </div>
+                  <Target className="h-5 w-5 text-[var(--accent)]" />
+                </div>
+
+                {analysis.gap_analysis.length > 0 ? (
+                  <div className="space-y-3">
+                    {analysis.gap_analysis.map((gap, index) => {
+                      const current = getLevelScore(gap.current_level);
+                      const required = getLevelScore(gap.required_level);
+
+                      return (
+                        <motion.div
+                          key={`${gap.skill}-${index}`}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.03 }}
+                          className="rounded-[20px] border border-white/8 bg-white/[0.02] p-4"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-[var(--text-primary)]">{gap.skill}</p>
+                            <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${priorityClasses[gap.priority?.toLowerCase()] || priorityClasses.low}`}>
+                              {gap.priority}
+                            </span>
+                          </div>
+
+                          <div className="mt-3 grid gap-2 text-xs text-[var(--text-secondary)] sm:grid-cols-2">
+                            <div>
+                              Current
+                              <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/5">
+                                <motion.div
+                                  className="h-full rounded-full bg-white/30"
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${current}%` }}
+                                  transition={{ duration: 0.35, ease: "easeOut" }}
+                                />
+                              </div>
+                              <p className="mt-1">{String(gap.current_level)}</p>
+                            </div>
+                            <div>
+                              Required
+                              <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/5">
+                                <motion.div
+                                  className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[#f2d78a]"
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${required}%` }}
+                                  transition={{ duration: 0.35, ease: "easeOut", delay: 0.05 }}
+                                />
+                              </div>
+                              <p className="mt-1">{String(gap.required_level)}</p>
+                            </div>
+                          </div>
+
+                          {gap.gap ? (
+                            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">{gap.gap}</p>
+                          ) : null}
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <EmptyPanel title="No major gaps detected" description="The JD does not show obvious missing skills against your current profile." />
+                )}
+              </div>
+
+              <div className="card-dark rounded-[24px] p-5 sm:p-6">
+                <div className="mb-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                    Action list
+                  </p>
+                  <h2 className="heading-md mt-1">What to do next</h2>
+                </div>
+
                 <div className="space-y-3">
-                  {analysis.gap_analysis.map((gap, i) => {
-                    const current = getLevelScore(gap.current_level);
-                    const required = getLevelScore(gap.required_level);
-                    return (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.06 }}
-                        className="rounded-lg border border-border/30 p-4"
-                      >
-                        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-sm font-medium">{gap.skill}</span>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                              priorityColors[gap.priority?.toLowerCase()] || "bg-secondary text-secondary-foreground"
-                            }`}
-                          >
-                            {gap.priority}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>Current: {gap.current_level}</span>
-                          <ChevronRight className="h-3 w-3" />
-                          <span>Required: {gap.required_level}</span>
-                        </div>
-                        <div className="mt-3 space-y-2">
-                          <div className="h-2 rounded-full bg-muted">
-                            <motion.div
-                              className="h-2 rounded-full bg-primary/40"
-                              initial={{ width: 0 }}
-                              animate={{ width: `${current}%` }}
-                              transition={{ type: "spring", stiffness: 120, damping: 20, delay: i * 0.04 }}
-                            />
-                          </div>
-                          <div className="h-2 rounded-full bg-muted">
-                            <motion.div
-                              className="h-2 rounded-full bg-gradient-to-r from-primary to-amber-500"
-                              initial={{ width: 0 }}
-                              animate={{ width: `${required}%` }}
-                              transition={{ type: "spring", stiffness: 120, damping: 20, delay: i * 0.04 + 0.05 }}
-                            />
-                          </div>
-                        </div>
-                        {gap.gap && <p className="mt-2 text-xs text-muted-foreground">{gap.gap}</p>}
-                      </motion.div>
-                    );
-                  })}
+                  {analysis.recommendations.map((recommendation, index) => (
+                    <motion.div
+                      key={`${recommendation}-${index}`}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.04 }}
+                      className="flex items-start gap-3 rounded-[20px] border border-white/8 bg-white/[0.02] p-4"
+                    >
+                      <div className="rounded-xl bg-[var(--accent-subtle)] p-2 text-[var(--accent)]">
+                        <ArrowRight className="h-4 w-4" />
+                      </div>
+                      <p className="text-sm leading-6 text-[var(--text-secondary)]">{recommendation}</p>
+                    </motion.div>
+                  ))}
                 </div>
               </div>
-            )}
-
-            {analysis.recommendations.length > 0 && (
-              <div className="rounded-2xl p-5 card-dark sm:p-6">
-                <h2 className="heading-md mb-4 flex items-center gap-2 font-semibold">
-                  <CheckCircle2 className="h-5 w-5 text-primary" />
-                  Recommendations
-                </h2>
-                <ul className="space-y-2">
-                  {analysis.recommendations.map((rec, i) => (
-                    <motion.li
-                      key={i}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.08 }}
-                      className="flex items-start gap-2 text-sm"
-                    >
-                      <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
-                      {rec}
-                    </motion.li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </motion.div>
-        )}
+            </div>
+          </motion.section>
+        ) : null}
       </AnimatePresence>
     </motion.div>
   );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{value}</p>
+    </div>
+  );
+}
+
+function GuideStep({
+  number,
+  title,
+  description,
+}: {
+  number: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-[20px] border border-white/8 bg-white/[0.03] p-4">
+      <div className="flex items-start gap-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-black/25 text-sm font-semibold text-[var(--accent)]">
+          {number}
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h3>
+          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{description}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[20px] border border-white/8 bg-white/[0.02] p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</p>
+      <p className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{value}</p>
+    </div>
+  );
+}
+
+function EmptyPanel({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="rounded-[22px] border border-dashed border-white/10 bg-white/[0.02] p-6 text-center">
+      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--accent-subtle)] text-[var(--accent)]">
+        <CheckCircle2 className="h-5 w-5" />
+      </div>
+      <h3 className="text-base font-semibold text-[var(--text-primary)]">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{description}</p>
+    </div>
+  );
+}
+
+function getLevelScore(level: string | number) {
+  if (typeof level === "number") return Math.min(100, Math.max(0, level * 20));
+
+  const normalized = level.toLowerCase();
+  if (normalized.includes("advanced")) return 100;
+  if (normalized.includes("intermediate")) return 70;
+  if (normalized.includes("basic")) return 40;
+  if (normalized.includes("beginner")) return 25;
+
+  const parsed = Number.parseInt(level, 10);
+  return Number.isNaN(parsed) ? 50 : Math.min(100, Math.max(0, parsed * 20));
 }

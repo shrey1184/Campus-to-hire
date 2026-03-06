@@ -1,21 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useRef } from "react";
+import { useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import Logo from "@/components/Logo";
-import { motion, useScroll, useTransform, useSpring } from "framer-motion";
+import { motion, useScroll, useTransform, useSpring, type MotionValue } from "framer-motion";
+import type { UserProfile } from "@/types";
 
 // Aceternity Components
 import { AuroraBackground } from "@/components/aceternity/AuroraBackground";
 import { TextGenerateEffect } from "@/components/aceternity/TextGenerateEffect";
 import { Spotlight } from "@/components/aceternity/Spotlight";
-import { MovingBorder, MovingBorderButton } from "@/components/aceternity/MovingBorder";
+import { MovingBorder } from "@/components/aceternity/MovingBorder";
 
 // Magic Components
 import { NumberTicker } from "@/components/magic/NumberTicker";
 import { AnimatedGradientText } from "@/components/magic/AnimatedGradientText";
-import { BlurFade, BlurFadeContainer } from "@/components/magic/BlurFade";
+import { BlurFade } from "@/components/magic/BlurFade";
 import { Marquee } from "@/components/magic/Marquee";
 import { ShimmerButton } from "@/components/magic/ShimmerButton";
 
@@ -180,18 +181,28 @@ function MagneticButton({
   className?: string;
   href?: string;
 }) {
-  const Component = href ? motion(Link) : motion.button;
-  
+  if (href) {
+    return (
+      <motion.div
+        className={className}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.98 }}
+        transition={{ type: "spring", stiffness: 400, damping: 17 }}
+      >
+        <Link href={href}>{children}</Link>
+      </motion.div>
+    );
+  }
+
   return (
-    <Component
-      href={href}
+    <motion.button
       className={className}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 400, damping: 17 }}
     >
       {children}
-    </Component>
+    </motion.button>
   );
 }
 
@@ -221,7 +232,7 @@ function OrbitNumber({ num, delay = 0 }: { num: string; delay?: number }) {
   );
 }
 
-function AnimatedLine({ progress }: { progress: any }) {
+function AnimatedLine({ progress }: { progress: MotionValue<string> }) {
   return (
     <div className="absolute top-8 left-0 right-0 h-0.5 bg-[var(--border-default)] hidden lg:block">
       <motion.div
@@ -236,10 +247,7 @@ function AnimatedLine({ progress }: { progress: any }) {
 // SECTION COMPONENTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-function HeroSection({ user, loading }: { user: any; loading: boolean }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
+function HeroSection({ user, loading }: { user: UserProfile | null; loading: boolean }) {
   return (
     <AuroraBackground className="min-h-screen">
       {/* Spotlight Effect */}
@@ -255,7 +263,7 @@ function HeroSection({ user, loading }: { user: any; loading: boolean }) {
         <div className="container-main flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
           <Logo size="md" />
           <div className="flex items-center gap-3">
-            {mounted && !loading && (
+            {!loading && (
               user ? (
                 <MagneticButton href="/dashboard">
                   <ShimmerButton>Dashboard</ShimmerButton>
@@ -394,7 +402,7 @@ function HeroSection({ user, loading }: { user: any; loading: boolean }) {
   );
 }
 
-function CategorySection({ user }: { user: any }) {
+function CategorySection({ user }: { user: UserProfile | null }) {
   const [activeTab, setActiveTab] = useState<CategoryTab>("topics");
 
   return (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useInView, useSpring, motion, useReducedMotion } from "framer-motion";
+import { useInView, useSpring, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface NumberTickerProps {

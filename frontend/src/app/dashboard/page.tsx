@@ -1,35 +1,45 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { useAuth } from "@/lib/auth-context";
-import { profileApi, roadmapApi, dailyPlanApi, dashboardApi } from "@/lib/api";
-import type { UserProgressStats, DashboardStats, Roadmap, DailyPlan, CompleteDashboardStats } from "@/types";
 import Link from "next/link";
-import { NumberTicker } from "@/components/magic/NumberTicker";
 import { BlurFade } from "@/components/magic/BlurFade";
+import { NumberTicker } from "@/components/magic/NumberTicker";
+import { useAuth } from "@/lib/auth-context";
+import { dashboardApi, dailyPlanApi, profileApi, roadmapApi } from "@/lib/api";
+import type {
+  CompleteDashboardStats,
+  DailyPlan,
+  DashboardStats,
+  Roadmap,
+  UserProgressStats,
+} from "@/types";
 import {
-  Target,
+  ArrowRight,
+  Award,
+  BookOpen,
+  Brain,
   CalendarCheck,
+  CheckCircle2,
+  Clock3,
+  FileSearch,
   Flame,
+  Loader2,
   Map,
   MessageSquare,
-  FileSearch,
-  ArrowRight,
-  Loader2,
-  CheckCircle2,
-  Clock,
-  BookOpen,
-  TrendingUp,
-  Award,
-  Zap,
-  Trophy,
-  Star,
-  Brain,
-  Code2,
   Sparkles,
-  Crown,
+  Target,
+  TrendingUp,
 } from "lucide-react";
+
+type StepCard = {
+  title: string;
+  description: string;
+  href: string;
+  cta: string;
+  icon: typeof Target;
+  status: "ready" | "attention" | "locked";
+};
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -43,490 +53,583 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const [p, s, cs] = await Promise.all([
+        const [progressData, statsData, completeStatsData, roadmapData] = await Promise.all([
           profileApi.getProgress().catch(() => null),
           profileApi.getStats().catch(() => null),
           dashboardApi.getCompleteStats().catch(() => null),
+          roadmapApi.getActive().catch(() => null),
         ]);
-        setProgress(p);
-        setStats(s);
-        setCompleteStats(cs);
 
-        const rm = await roadmapApi.getActive().catch(() => null);
-        setRoadmap(rm);
+        setProgress(progressData);
+        setStats(statsData);
+        setCompleteStats(completeStatsData);
+        setRoadmap(roadmapData);
 
-        if (rm) {
-          const tp = await dailyPlanApi.getToday().catch(() => null);
-          setTodayPlan(tp);
+        if (roadmapData) {
+          const planData = await dailyPlanApi.getToday().catch(() => null);
+          setTodayPlan(planData);
         }
-      } catch {
-        // silently fail
       } finally {
         setLoading(false);
       }
     }
+
     loadDashboard();
   }, []);
+
+  const targetRole = user?.target_role?.replace(/_/g, " ") || "software engineer";
+  const firstName = user?.name?.split(" ")[0] || "Student";
+  const completedTasks = todayPlan?.tasks.filter((task) => task.completed).length ?? 0;
+  const totalTasks = todayPlan?.tasks.length ?? 0;
+  const completionPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  const xpStats = useMemo(() => {
+    const totalXP =
+      completeStats?.total_xp ??
+      (progress?.completed_tasks ?? 0) * 10 + (progress?.total_interviews ?? 0) * 25;
+    const xpForNextLevel = completeStats?.xp_for_next_level ?? 100;
+    const xpInCurrentLevel = completeStats?.xp_in_current_level ?? totalXP % xpForNextLevel;
+    const currentLevel = completeStats?.current_level ?? Math.floor(totalXP / xpForNextLevel) + 1;
+
+    return { totalXP, xpForNextLevel, xpInCurrentLevel, currentLevel };
+  }, [completeStats, progress]);
+
+  const weeklyStats = completeStats?.weekly_stats ?? {
+    problems_solved: Math.max(progress?.completed_tasks ?? 0, completedTasks),
+    study_hours: Number(((todayPlan?.tasks.reduce((sum, task) => sum + (task.duration_minutes ?? 0), 0) ?? 0) / 60).toFixed(1)),
+    xp_gained: completeStats?.xp_gained_today ?? xpStats.totalXP,
+    tasks_completed: completedTasks,
+  };
+
+  const performanceLabels =
+    completeStats?.performance_trend.labels ??
+    stats?.weekly_progress.labels ??
+    ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const performanceValues =
+    completeStats?.performance_trend.values ??
+    stats?.weekly_progress.tasks_completed ??
+    [2, 3, 4, 3, 5, 4, 6];
+  const performanceChange =
+    completeStats?.performance_trend.change_percentage ??
+    calculateTrendChange(performanceValues);
+
+  const activityData =
+    completeStats?.activity_heatmap?.map((entry) => ({
+      ...entry,
+      dateLabel: new Date(entry.date).toLocaleDateString(),
+    })) ?? buildFallbackActivity(progress?.completed_tasks ?? 0, stats?.streak_days ?? 0);
+
+  const activeDays = activityData.filter((entry) => entry.count > 0).length;
+  const roadmapWeeks = roadmap?.content.weeks.length ?? roadmap?.total_weeks ?? 0;
+  const remainingWeeks = roadmap ? Math.max(roadmap.total_weeks - roadmap.current_week + 1, 0) : 0;
+
+  const nextSteps: StepCard[] = roadmap
+    ? [
+        {
+          title: "Execute today",
+          description:
+            totalTasks > 0
+              ? `${completedTasks} of ${totalTasks} tasks done. Finish the current study block first.`
+              : "Your roadmap exists, but today’s task list still needs to be generated.",
+          href: "/dashboard/today",
+          cta: totalTasks > 0 ? "Open today’s tasks" : "Check today’s plan",
+          icon: CalendarCheck,
+          status: totalTasks > 0 ? "ready" : "attention",
+        },
+        {
+          title: "Review roadmap",
+          description: `Week ${roadmap.current_week} is active. ${remainingWeeks} week${remainingWeeks === 1 ? "" : "s"} remain in the current plan.`,
+          href: "/dashboard/roadmap",
+          cta: "See full roadmap",
+          icon: Map,
+          status: "ready",
+        },
+        {
+          title: "Pressure-test with a JD",
+          description: "Compare your current profile to a real role before the next mock interview.",
+          href: "/dashboard/jd-analyze",
+          cta: "Analyze a job description",
+          icon: FileSearch,
+          status: "ready",
+        },
+      ]
+    : [
+        {
+          title: "Generate roadmap",
+          description: "Start with a full preparation plan based on your role, time, and current skill level.",
+          href: "/dashboard/roadmap",
+          cta: "Create roadmap",
+          icon: Map,
+          status: "attention",
+        },
+        {
+          title: "Define today’s work",
+          description: "Daily tasks unlock automatically after the roadmap is created.",
+          href: "/dashboard/today",
+          cta: "Preview tasks page",
+          icon: CalendarCheck,
+          status: "locked",
+        },
+        {
+          title: "Validate against a JD",
+          description: "Use the job description analyzer to see what employers expect right now.",
+          href: "/dashboard/jd-analyze",
+          cta: "Open JD analyzer",
+          icon: FileSearch,
+          status: "ready",
+        },
+      ];
 
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="rounded-xl px-8 py-6 text-center card-glass pulse-card">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary spinner-glow" />
-          <p className="mt-3 text-micro text-muted-foreground">Syncing your dashboard...</p>
+        <div className="card-glass pulse-card rounded-xl px-8 py-6 text-center">
+          <Loader2 className="spinner-glow mx-auto h-8 w-8 animate-spin text-primary" />
+          <p className="text-micro mt-3 text-muted-foreground">Syncing your dashboard...</p>
         </div>
       </div>
     );
   }
-
-  const completedTasks = todayPlan?.tasks?.filter((t) => t.completed).length ?? 0;
-  const totalTasks = todayPlan?.tasks?.length ?? 0;
-  const targetRole = user?.target_role?.replace(/_/g, " ") || "SDE at Amazon";
-  const daysLeft = roadmap ? Math.max(0, (roadmap.total_weeks - (roadmap.current_week - 1)) * 7) : 85;
-
-  const totalXP = (progress?.completed_tasks ?? 0) * 10 + (progress?.total_interviews ?? 0) * 25;
-  const currentLevel = Math.floor(totalXP / 100) + 1;
-  const xpInCurrentLevel = totalXP % 100;
-  const xpForNextLevel = 100;
 
   return (
     <motion.div
       className="space-y-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.45 }}
+      transition={{ duration: 0.35 }}
     >
-      <BlurFade delay={0.1}>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-3">
-              <h1 className="heading-lg font-bold">
-                Welcome back, {user?.name?.split(" ")[0] || "Student"}!
-              </h1>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 320, damping: 20 }}
-                className="flex items-center gap-2 rounded-full border border-primary/30 bg-gradient-to-r from-primary/20 to-amber-500/20 px-3 py-1"
-              >
-                <Crown className="h-4 w-4 text-primary" />
-                <span className="text-sm font-bold text-primary">Level {currentLevel}</span>
-              </motion.div>
-            </div>
-            <p className="body-text text-muted-foreground">
-              You&apos;re on track to become an {targetRole} in {daysLeft} days.
-            </p>
-            <div className="mt-3 max-w-md">
-              <div className="mb-1 flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">
-                  {xpInCurrentLevel} / {xpForNextLevel} XP
-                </span>
-                <span className="font-semibold text-primary">
-                  {xpForNextLevel - xpInCurrentLevel} XP to Level {currentLevel + 1}
-                </span>
+      <BlurFade delay={0.05}>
+        <section className="relative overflow-hidden rounded-[28px] border border-[var(--accent)]/20 bg-[radial-gradient(circle_at_top_left,rgba(201,168,76,0.16),transparent_30%),linear-gradient(135deg,#101010,#080808)] p-6 sm:p-8">
+          <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[linear-gradient(180deg,rgba(201,168,76,0.08),transparent)] lg:block" />
+          <div className="relative grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
+            <div className="space-y-5">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/25 bg-[var(--accent-subtle)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">
+                <Sparkles className="h-3.5 w-3.5" />
+                Placement mission control
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-muted">
+
+              <div className="space-y-3">
+                <h1 className="heading-xl max-w-3xl">
+                  {firstName}, your path to <span className="text-gradient">{targetRole}</span> is already mapped.
+                </h1>
+                <p className="body-text max-w-2xl text-[var(--text-secondary)]">
+                  Work the plan in sequence: lock the roadmap, finish today’s tasks, then test yourself against real interview and JD expectations.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Link href={roadmap ? "/dashboard/today" : "/dashboard/roadmap"} className="btn-accent inline-flex items-center gap-2 px-5 py-3 text-sm">
+                  {roadmap ? "Continue today’s plan" : "Generate your roadmap"}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link href="/dashboard/jd-analyze" className="btn-outline inline-flex items-center gap-2 px-5 py-3 text-sm">
+                  <FileSearch className="h-4 w-4" />
+                  Analyze a JD
+                </Link>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <StatPanel
+                  label="Current level"
+                  value={xpStats.currentLevel}
+                  helper={`${xpStats.xpForNextLevel - xpStats.xpInCurrentLevel} XP to next level`}
+                  icon={Award}
+                />
+                <StatPanel
+                  label="Streak"
+                  value={completeStats?.streak_days ?? stats?.streak_days ?? 0}
+                  helper={`${completeStats?.personal_best_streak ?? Math.max(stats?.streak_days ?? 0, 0)} day best`}
+                  icon={Flame}
+                />
+                <StatPanel
+                  label="Readiness"
+                  value={progress?.completion_rate ?? 0}
+                  suffix="%"
+                  helper={roadmap ? `Week ${roadmap.current_week} of ${roadmapWeeks}` : "No roadmap generated yet"}
+                  icon={Target}
+                />
+              </div>
+            </div>
+
+            <div className="card-glass rounded-[24px] border-white/10 p-5 sm:p-6">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                    XP progress
+                  </p>
+                  <p className="mt-1 text-3xl font-semibold text-[var(--text-primary)]">
+                    <NumberTicker value={xpStats.totalXP} />
+                  </p>
+                </div>
+                <div className="rounded-full border border-[var(--accent)]/25 bg-[var(--accent-subtle)] px-3 py-1 text-sm font-semibold text-[var(--accent)]">
+                  Level {xpStats.currentLevel}
+                </div>
+              </div>
+
+              <div className="mb-5 h-3 overflow-hidden rounded-full bg-white/5">
                 <motion.div
-                  className="h-full bg-gradient-to-r from-primary to-amber-500"
+                  className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[#f2d78a]"
                   initial={{ width: 0 }}
-                  animate={{ width: `${(xpInCurrentLevel / xpForNextLevel) * 100}%` }}
-                  transition={{ type: "spring", stiffness: 120, damping: 20, delay: 0.2 }}
+                  animate={{ width: `${Math.min((xpStats.xpInCurrentLevel / xpStats.xpForNextLevel) * 100, 100)}%` }}
+                  transition={{ duration: 0.45, ease: "easeOut" }}
+                />
+              </div>
+
+              <div className="grid gap-3">
+                <MiniMetric
+                  label="Today’s completion"
+                  value={`${completionPct}%`}
+                  icon={CalendarCheck}
+                />
+                <MiniMetric
+                  label="Problems solved"
+                  value={String(completeStats?.problems_solved ?? progress?.completed_tasks ?? 0)}
+                  icon={CheckCircle2}
+                />
+                <MiniMetric
+                  label="Interview average"
+                  value={`${completeStats?.average_interview_score ?? progress?.average_interview_score ?? 0}/100`}
+                  icon={MessageSquare}
                 />
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
-            {roadmap && (
-              <Link
-                href="/dashboard/today"
-                className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold btn-accent"
-              >
-                Resume Learning
-              </Link>
-            )}
-            <Link
-              href="/dashboard/roadmap"
-              className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold transition hover:bg-muted/50"
-            >
-              View Roadmap
-            </Link>
-          </div>
-        </div>
+        </section>
       </BlurFade>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[
-          {
-            title: "Total XP",
-            value: totalXP,
-            suffix: "",
-            helper: `+${Math.floor(Math.random() * 50 + 10)} today`,
-            border: "border-l-primary",
-            icon: <Sparkles className="h-4 w-4 text-primary" />,
-          },
-          {
-            title: "Streak",
-            value: stats?.streak_days ?? 0,
-            suffix: " Days",
-            helper: `Personal best: ${Math.max(stats?.streak_days ?? 0, 7)}`,
-            border: "border-l-amber-500",
-            icon: <Flame className="h-4 w-4 text-amber-500" />,
-          },
-          {
-            title: "Solved",
-            value: progress?.completed_tasks ?? 0,
-            suffix: "",
-            helper: `${progress?.completion_rate ?? 0}% completion`,
-            border: "border-l-emerald-500",
-            icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
-          },
-          {
-            title: "Interviews",
-            value: progress?.total_interviews ?? 0,
-            suffix: "",
-            helper: `Avg: ${progress?.average_interview_score ?? 78}/100`,
-            border: "border-l-blue-500",
-            icon: <MessageSquare className="h-4 w-4 text-blue-500" />,
-          },
-        ].map((item, index) => (
-          <BlurFade key={item.title} delay={index * 0.1}>
-            <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 320, damping: 22 }}>
-              <div className={`rounded-xl border-l-4 p-4 card-dark ${item.border}`}>
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {item.title}
-                  </span>
-                  {item.icon}
-                </div>
-                <p className="text-2xl font-bold">
-                  <NumberTicker value={item.value} />
-                  {item.suffix}
+      <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+        <BlurFade delay={0.1}>
+          <div className="card-dark rounded-[24px] p-5 sm:p-6">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                  Step by step
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">{item.helper}</p>
+                <h2 className="heading-md mt-1">What to do next</h2>
               </div>
-            </motion.div>
-          </BlurFade>
-        ))}
-      </div>
+              <Brain className="h-5 w-5 text-[var(--accent)]" />
+            </div>
 
-      <div className="grid gap-5 lg:grid-cols-3">
-        <div className="space-y-5 lg:col-span-2">
-          <BlurFade delay={0.3}>
-            <div className="rounded-2xl border border-border p-5 card-dark sm:p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="heading-md font-semibold">Today&apos;s Plan</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {completedTasks} of {totalTasks} tasks completed
-                  </p>
+            <div className="space-y-3">
+              {nextSteps.map((step, index) => (
+                <StepActionCard key={step.title} index={index + 1} step={step} />
+              ))}
+            </div>
+          </div>
+        </BlurFade>
+
+        <BlurFade delay={0.14}>
+          <div className="card-dark rounded-[24px] p-5 sm:p-6">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                  This week
+                </p>
+                <h2 className="heading-md mt-1">Execution summary</h2>
+              </div>
+              <Clock3 className="h-5 w-5 text-[var(--accent)]" />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <SummaryCard label="Tasks completed" value={weeklyStats.tasks_completed} />
+              <SummaryCard label="Study hours" value={weeklyStats.study_hours} />
+              <SummaryCard label="XP gained" value={weeklyStats.xp_gained} />
+              <SummaryCard label="Problems solved" value={weeklyStats.problems_solved} />
+            </div>
+          </div>
+        </BlurFade>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <BlurFade delay={0.18}>
+          <div className="card-dark rounded-[24px] p-5 sm:p-6">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                  Today
+                </p>
+                <h2 className="heading-md mt-1">Current task lane</h2>
+              </div>
+              <BookOpen className="h-5 w-5 text-[var(--accent)]" />
+            </div>
+
+            {todayPlan ? (
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">
+                        Week {todayPlan.week}, Day {todayPlan.day}
+                      </p>
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                        {todayPlan.focus_area || "Focus on consistent execution and interview-oriented practice."}
+                      </p>
+                    </div>
+                    <div className="rounded-full border border-[var(--accent)]/20 bg-[var(--accent-subtle)] px-3 py-1 text-sm font-semibold text-[var(--accent)]">
+                      {completedTasks}/{totalTasks} done
+                    </div>
+                  </div>
                 </div>
-                {todayPlan && (
-                  <Link href="/dashboard/today" className="link-glow flex items-center gap-1 text-sm">
-                    View All
-                  </Link>
-                )}
-              </div>
 
-              {todayPlan ? (
-                <>
-                  <p className="mb-4 text-sm text-muted-foreground">
-                    {todayPlan.focus_area || "Focus on Dynamic Programming and Leadership Principles today"}
-                  </p>
-                  <div className="space-y-3">
-                    {todayPlan.tasks.slice(0, 4).map((task, index) => (
-                      <motion.div
-                        key={task.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 + 0.2, duration: 0.35 }}
-                        className={`flex items-start gap-3 rounded-lg border p-3.5 transition-all hover:shadow-md ${
-                          task.completed
-                            ? "border-primary/40 bg-primary/5"
-                            : "border-border bg-background hover:border-primary/30"
-                        }`}
-                      >
-                        <div
-                          className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${
-                            task.completed ? "border-primary bg-primary" : "border-muted-foreground"
-                          }`}
-                        >
-                          {task.completed && <CheckCircle2 className="h-3 w-3 text-primary-foreground" />}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className={`text-sm font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`}>
+                {todayPlan.tasks.slice(0, 4).map((task) => (
+                  <div
+                    key={task.id}
+                    className={`rounded-2xl border p-4 ${
+                      task.completed
+                        ? "border-[var(--accent)]/30 bg-[var(--accent-subtle)]"
+                        : "border-white/8 bg-white/[0.02]"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          {task.completed ? (
+                            <CheckCircle2 className="h-4 w-4 text-[var(--accent)]" />
+                          ) : (
+                            <Target className="h-4 w-4 text-[var(--text-muted)]" />
+                          )}
+                          <p className={`text-sm font-medium ${task.completed ? "text-[var(--text-secondary)] line-through" : "text-[var(--text-primary)]"}`}>
                             {task.title}
                           </p>
-                          {task.description && (
-                            <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                              {task.description}
-                            </p>
-                          )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          {task.duration_minutes && (
-                            <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">
-                              {task.duration_minutes} min
-                            </span>
-                          )}
-                          {task.type && (
-                            <span
-                              className={`rounded-md px-2 py-1 text-xs font-medium capitalize ${
-                                task.type === "learn"
-                                  ? "bg-primary/15 text-primary"
-                                  : task.type === "practice"
-                                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                                    : "bg-muted text-muted-foreground"
-                              }`}
-                            >
-                              {task.type}
-                            </span>
-                          )}
-                        </div>
-                      </motion.div>
-                    ))}
+                        {task.description ? (
+                          <p className="mt-2 text-sm text-[var(--text-secondary)]">{task.description}</p>
+                        ) : null}
+                      </div>
+                      {task.duration_minutes ? (
+                        <span className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-[var(--text-secondary)]">
+                          {task.duration_minutes} min
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
-                </>
-              ) : roadmap ? (
-                <p className="text-sm text-muted-foreground">Loading your daily plan...</p>
-              ) : (
-                <div className="rounded-lg p-8 text-center card-glass">
-                  <Map className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-                  <p className="mb-2 font-medium">No Roadmap Yet</p>
-                  <p className="mb-4 text-sm text-muted-foreground">
-                    Generate a personalized roadmap to get daily plans
-                  </p>
-                  <Link
-                    href="/dashboard/roadmap"
-                    className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium btn-accent"
-                  >
-                    Generate Roadmap <ArrowRight className="h-3 w-3" />
-                  </Link>
-                </div>
-              )}
-            </div>
-          </BlurFade>
+                ))}
 
-          {stats?.skill_levels && Object.keys(stats.skill_levels).length > 0 && (
-            <BlurFade delay={0.38}>
-              <div className="rounded-2xl border border-border p-5 card-dark sm:p-6">
-                <div className="mb-4 flex items-center justify-between">
-                  <div>
-                    <h2 className="heading-md font-semibold">Skill Analysis</h2>
-                    <p className="mt-0.5 text-xs text-muted-foreground">Your current proficiency vs target role</p>
-                  </div>
-                  <Brain className="h-5 w-5 text-primary" />
-                </div>
-                <RadarChart skills={stats.skill_levels} />
+                <Link href="/dashboard/today" className="link-glow inline-flex items-center gap-2 text-sm font-medium">
+                  Open the full task board
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </div>
-            </BlurFade>
-          )}
-
-          <BlurFade delay={0.45}>
-            <div className="rounded-2xl border border-border p-5 card-dark sm:p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="heading-md font-semibold">Performance Trend</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Last 7 days activity</p>
-                </div>
-                <TrendingUp className="h-5 w-5 text-primary" />
-              </div>
-              <PerformanceChart />
-            </div>
-          </BlurFade>
-
-          <BlurFade delay={0.5}>
-            <ActivityHeatmap stats={stats} />
-          </BlurFade>
-        </div>
-
-        <div className="space-y-4">
-          <BlurFade delay={0.22}>
-            <div className="rounded-xl border border-border p-5 card-dark">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Achievements</h3>
-                <Trophy className="h-4 w-4 text-primary" />
-              </div>
-              <div className="space-y-3">
-                <AchievementBadge
-                  icon={<Flame className="h-5 w-5" />}
-                  title="Fire Starter"
-                  description="5 day streak"
-                  earned={true}
-                  color="bg-amber-500/15 text-amber-500"
-                />
-                <AchievementBadge
-                  icon={<Code2 className="h-5 w-5" />}
-                  title="Code Warrior"
-                  description="50 problems solved"
-                  earned={(progress?.completed_tasks ?? 0) >= 50}
-                  color="bg-primary/15 text-primary"
-                />
-                <AchievementBadge
-                  icon={<Star className="h-5 w-5" />}
-                  title="Interview Pro"
-                  description="10 interviews completed"
-                  earned={(progress?.total_interviews ?? 0) >= 10}
-                  color="bg-blue-500/15 text-blue-500"
-                />
-                <AchievementBadge
-                  icon={<Zap className="h-5 w-5" />}
-                  title="Speed Demon"
-                  description="Complete 3 tasks in 1 day"
-                  earned={false}
-                  color="bg-purple-500/15 text-purple-500"
-                />
-              </div>
-            </div>
-          </BlurFade>
-
-          <BlurFade delay={0.28}>
-            <div className="rounded-xl border border-border p-5 card-dark">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">This Week</h3>
-                <CalendarCheck className="h-4 w-4 text-primary" />
-              </div>
-              <div className="space-y-3">
-                <StatItem
-                  label="Problems Solved"
-                  value={42}
-                  icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
-                />
-                <StatItem label="Study Hours" value="12.5" icon={<Clock className="h-4 w-4 text-blue-500" />} />
-                <StatItem label="XP Gained" value={485} icon={<Sparkles className="h-4 w-4 text-primary" />} />
-                <StatItem label="Tasks Completed" value={completedTasks} icon={<Target className="h-4 w-4 text-amber-500" />} />
-              </div>
-            </div>
-          </BlurFade>
-
-          <BlurFade delay={0.34}>
-            <div className="relative overflow-hidden rounded-xl border border-border p-5 card-dark">
-              <div className="absolute right-0 top-0 text-6xl opacity-5">
-                <Award />
-              </div>
-              <div className="relative">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm font-medium text-muted-foreground">Mock Interview</span>
-                  <Award className="h-5 w-5 text-primary" />
-                </div>
-                <p className="text-3xl font-bold">
-                  <NumberTicker value={progress?.average_interview_score ?? 78} />
-                  <span className="text-lg text-muted-foreground">/100</span>
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">Average performance score</p>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-primary to-amber-500"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress?.average_interview_score ?? 78}%` }}
-                    transition={{ type: "spring", stiffness: 120, damping: 20, delay: 0.4 }}
-                  />
-                </div>
-              </div>
-            </div>
-          </BlurFade>
-
-          <BlurFade delay={0.4}>
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-muted-foreground">Quick Actions</h3>
-              <QuickAction
-                href="/dashboard/interview"
-                icon={<MessageSquare className="h-4 w-4" />}
-                title="Mock Interview"
-                description="Practice with AI"
-              />
-              <QuickAction
-                href="/dashboard/jd-analyze"
-                icon={<FileSearch className="h-4 w-4" />}
-                title="Analyze JD"
-                description="Check skill-gap"
-              />
-              <QuickAction
+            ) : (
+              <EmptyState
+                icon={CalendarCheck}
+                title="No daily plan yet"
+                description="Generate or refresh your roadmap first, then today’s tasks will appear here."
                 href="/dashboard/roadmap"
-                icon={<Map className="h-4 w-4" />}
-                title="Roadmap"
-                description="View learning path"
+                cta="Go to roadmap"
+              />
+            )}
+          </div>
+        </BlurFade>
+
+        <BlurFade delay={0.22}>
+          <div className="space-y-4">
+            <div className="card-dark rounded-[24px] p-5 sm:p-6">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                    Performance
+                  </p>
+                  <h2 className="heading-md mt-1">7-day trend</h2>
+                </div>
+                <TrendingUp className="h-5 w-5 text-[var(--accent)]" />
+              </div>
+
+              <PerformanceChart
+                labels={performanceLabels}
+                values={performanceValues}
+                changePercentage={performanceChange}
               />
             </div>
-          </BlurFade>
-        </div>
-      </div>
+
+            <div className="card-dark rounded-[24px] p-5 sm:p-6">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                    Consistency
+                  </p>
+                  <h2 className="heading-md mt-1">Activity heatmap</h2>
+                </div>
+                <Flame className="h-5 w-5 text-[var(--accent)]" />
+              </div>
+
+              <ActivityHeatmap activeDays={activeDays} data={activityData} />
+            </div>
+          </div>
+        </BlurFade>
+      </section>
     </motion.div>
   );
 }
 
-function ActivityHeatmap({ stats }: { stats: DashboardStats | null }) {
-  const weeks = 12;
-  const daysPerWeek = 7;
-  const today = new Date();
+function StatPanel({
+  label,
+  value,
+  helper,
+  suffix,
+  icon: Icon,
+}: {
+  label: string;
+  value: number;
+  helper: string;
+  suffix?: string;
+  icon: typeof Target;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</p>
+        <Icon className="h-4 w-4 text-[var(--accent)]" />
+      </div>
+      <p className="text-2xl font-semibold text-[var(--text-primary)]">
+        <NumberTicker value={value} />
+        {suffix}
+      </p>
+      <p className="mt-1 text-sm text-[var(--text-secondary)]">{helper}</p>
+    </div>
+  );
+}
 
-  const activityData: { date: Date; count: number; level: number }[] = [];
+function MiniMetric({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  icon: typeof Target;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3">
+      <div className="flex items-center gap-3">
+        <div className="rounded-xl bg-[var(--accent-subtle)] p-2 text-[var(--accent)]">
+          <Icon className="h-4 w-4" />
+        </div>
+        <span className="text-sm text-[var(--text-secondary)]">{label}</span>
+      </div>
+      <span className="text-sm font-semibold text-[var(--text-primary)]">{value}</span>
+    </div>
+  );
+}
 
-  for (let week = weeks - 1; week >= 0; week--) {
-    for (let day = daysPerWeek - 1; day >= 0; day--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - (week * daysPerWeek + day));
+function StepActionCard({ index, step }: { index: number; step: StepCard }) {
+  const statusClasses = {
+    ready: "border-white/8 bg-white/[0.02]",
+    attention: "border-[var(--accent)]/25 bg-[var(--accent-subtle)]",
+    locked: "border-white/6 bg-white/[0.01] opacity-70",
+  } as const;
 
-      const recencyBonus = week < 2 ? 2 : 1;
-      const count = Math.floor(Math.random() * 8 * recencyBonus);
-      const level = count === 0 ? 0 : count < 3 ? 1 : count < 6 ? 2 : count < 10 ? 3 : 4;
-
-      activityData.push({ date, count, level });
-    }
-  }
-
-  const getLevelColor = (level: number) => {
-    switch (level) {
-      case 0:
-        return "bg-muted";
-      case 1:
-        return "bg-primary/20";
-      case 2:
-        return "bg-primary/40";
-      case 3:
-        return "bg-primary/60";
-      case 4:
-        return "bg-primary";
-      default:
-        return "bg-muted";
-    }
-  };
-
-  const activeDays = finalActivityData.filter(d => d.count > 0).length;
+  const Icon = step.icon;
 
   return (
-    <div className="rounded-2xl border border-border p-5 card-dark sm:p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="heading-md font-semibold">Activity</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {activityData.filter((d) => d.count > 0).length} days active in the last 12 weeks
-          </p>
+    <div className={`rounded-[22px] border p-4 sm:p-5 ${statusClasses[step.status]}`}>
+      <div className="flex items-start gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/8 bg-black/30 text-sm font-semibold text-[var(--accent)]">
+          {index}
         </div>
-        <Flame className="h-5 w-5 text-amber-500" />
-      </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Icon className="mt-0.5 h-4 w-4 text-[var(--accent)]" />
+                <h3 className="text-base font-semibold text-[var(--text-primary)]">{step.title}</h3>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{step.description}</p>
+            </div>
+            <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+              {step.status}
+            </span>
+          </div>
 
-      <div className="overflow-x-auto pb-2">
+          <Link href={step.href} className="link-glow mt-4 inline-flex items-center gap-2 text-sm font-medium">
+            {step.cta}
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SummaryCard({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{value}</p>
+    </div>
+  );
+}
+
+function PerformanceChart({
+  labels,
+  values,
+  changePercentage,
+}: {
+  labels: string[];
+  values: number[];
+  changePercentage: number;
+}) {
+  const maxValue = Math.max(...values, 1);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex h-48 items-end gap-3">
+        {values.map((value, index) => (
+          <div key={`${labels[index]}-${index}`} className="flex flex-1 flex-col items-center gap-2">
+            <div className="flex h-full w-full items-end">
+              <motion.div
+                className="w-full rounded-t-[16px] bg-gradient-to-t from-[var(--accent)] to-[#f2d78a]"
+                initial={{ height: 0 }}
+                animate={{ height: `${Math.max((value / maxValue) * 100, 8)}%` }}
+                transition={{ duration: 0.35, delay: index * 0.04 }}
+              />
+            </div>
+            <span className="text-xs text-[var(--text-muted)]">{labels[index] || `D${index + 1}`}</span>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-[var(--text-secondary)]">Daily output score</span>
+        <span className={changePercentage >= 0 ? "text-[var(--accent)]" : "text-[var(--destructive)]"}>
+          {changePercentage >= 0 ? "+" : ""}
+          {changePercentage}%
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ActivityHeatmap({
+  data,
+  activeDays,
+}: {
+  data: Array<{ date: string; count: number; level: number; dateLabel: string }>;
+  activeDays: number;
+}) {
+  const levelClass = ["bg-white/5", "bg-[var(--accent)]/25", "bg-[var(--accent)]/45", "bg-[var(--accent)]/70", "bg-[var(--accent)]"];
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-[var(--text-secondary)]">
+        {activeDays} active day{activeDays === 1 ? "" : "s"} in the last 12 weeks.
+      </p>
+      <div className="overflow-x-auto pb-1">
         <div className="inline-grid grid-flow-col gap-1" style={{ gridTemplateRows: "repeat(7, minmax(0, 1fr))" }}>
-          {activityData.map((day, i) => (
-            <motion.div
-              key={i}
-              className={`h-3 w-3 cursor-pointer rounded-sm ${getLevelColor(day.level)} transition-all hover:ring-2 hover:ring-primary`}
-              title={`${day.date.toLocaleDateString()}: ${day.count} tasks`}
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: i * 0.005, type: "spring", stiffness: 300, damping: 18 }}
+          {data.map((entry) => (
+            <div
+              key={entry.date}
+              title={`${entry.dateLabel}: ${entry.count} tasks`}
+              className={`h-3.5 w-3.5 rounded-[4px] ${levelClass[entry.level] ?? levelClass[0]}`}
             />
           ))}
         </div>
       </div>
-
-      <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+      <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
         <span>Less</span>
         <div className="flex items-center gap-1">
-          <div className="h-3 w-3 rounded-sm bg-muted" />
-          <div className="h-3 w-3 rounded-sm bg-primary/20" />
-          <div className="h-3 w-3 rounded-sm bg-primary/40" />
-          <div className="h-3 w-3 rounded-sm bg-primary/60" />
-          <div className="h-3 w-3 rounded-sm bg-primary" />
+          {levelClass.map((className) => (
+            <div key={className} className={`h-3.5 w-3.5 rounded-[4px] ${className}`} />
+          ))}
         </div>
         <span>More</span>
       </div>
@@ -534,223 +637,63 @@ function ActivityHeatmap({ stats }: { stats: DashboardStats | null }) {
   );
 }
 
-function PerformanceChart() {
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const data = [65, 72, 68, 85, 78, 82, 88];
-  const maxValue = Math.max(...data);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex h-40 items-end justify-between gap-2">
-        {data.map((value, i) => (
-          <div key={i} className="flex flex-1 flex-col items-center gap-2">
-            <div className="flex w-full items-end justify-center" style={{ height: "100%" }}>
-              <motion.div
-                className="group relative w-full cursor-pointer rounded-t-lg bg-gradient-to-t from-primary to-amber-500 hover:opacity-80"
-                initial={{ height: 0 }}
-                animate={{ height: `${(value / maxValue) * 100}%` }}
-                transition={{ delay: i * 0.08, type: "spring", stiffness: 130, damping: 18 }}
-                style={{ minHeight: "8px" }}
-              >
-                <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-semibold opacity-0 transition-opacity group-hover:opacity-100">
-                  {value}
-                </span>
-              </motion.div>
-            </div>
-            <span className="text-xs font-medium text-muted-foreground">{days[i]}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-primary" />
-          <span className="text-muted-foreground">Daily Score</span>
-        </div>
-        <span className={`font-semibold ${changePercentage >= 0 ? 'text-primary' : 'text-destructive'}`}>
-          {changePercentage >= 0 ? '+' : ''}{changePercentage}% from last week
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function AchievementBadge({
-  icon,
+function EmptyState({
+  icon: Icon,
   title,
   description,
-  earned,
-  color,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  earned: boolean;
-  color: string;
-}) {
-  return (
-    <motion.div whileHover={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 320, damping: 20 }}>
-      <div
-        className={`flex items-center gap-3 rounded-lg border p-3 transition-all ${
-          earned
-            ? "border-primary/30 bg-primary/5 hover:bg-primary/10"
-            : "border-border bg-background/50 opacity-60 hover:opacity-80"
-        }`}
-      >
-        <div className={`rounded-lg p-2 ${color} ${!earned && "grayscale"}`}>{icon}</div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">{title}</p>
-          <p className="text-xs text-muted-foreground">{description}</p>
-        </div>
-        {earned && <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-primary" />}
-      </div>
-    </motion.div>
-  );
-}
-
-function StatItem({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: number | string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between rounded-lg p-2 transition hover:bg-muted/30">
-      <div className="flex items-center gap-2">
-        {icon}
-        <span className="text-sm text-muted-foreground">{label}</span>
-      </div>
-      <span className="text-sm font-bold">{value}</span>
-    </div>
-  );
-}
-
-function RadarChart({ skills }: { skills: Record<string, number> }) {
-  const skillEntries = Object.entries(skills).slice(0, 6);
-  const numPoints = skillEntries.length;
-  const size = 280;
-  const center = size / 2;
-  const maxRadius = size / 2 - 40;
-  const levels = 5;
-
-  const getPoint = (index: number, value: number, radius: number) => {
-    const angle = (Math.PI * 2 * index) / numPoints - Math.PI / 2;
-    const r = (radius * value) / 5;
-    return {
-      x: center + r * Math.cos(angle),
-      y: center + r * Math.sin(angle),
-    };
-  };
-
-  const dataPoints = skillEntries
-    .map(([_, value], i) => {
-      const point = getPoint(i, Number(value), maxRadius);
-      return `${point.x},${point.y}`;
-    })
-    .join(" ");
-
-  const gridLevels = Array.from({ length: levels }, (_, i) => i + 1);
-
-  return (
-    <div className="flex items-center justify-center">
-      <svg width={size} height={size} className="overflow-visible">
-        {gridLevels.map((level) => (
-          <circle
-            key={level}
-            cx={center}
-            cy={center}
-            r={(maxRadius * level) / levels}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1"
-            className="text-border opacity-30"
-          />
-        ))}
-
-        {skillEntries.map((_, i) => {
-          const point = getPoint(i, 5, maxRadius);
-          return (
-            <line
-              key={i}
-              x1={center}
-              y1={center}
-              x2={point.x}
-              y2={point.y}
-              stroke="currentColor"
-              strokeWidth="1"
-              className="text-border opacity-30"
-            />
-          );
-        })}
-
-        <polygon
-          points={dataPoints}
-          fill="currentColor"
-          className="text-primary opacity-20"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinejoin="round"
-          style={{ strokeOpacity: 0.8 }}
-        />
-
-        {skillEntries.map(([_, value], i) => {
-          const point = getPoint(i, Number(value), maxRadius);
-          return <circle key={i} cx={point.x} cy={point.y} r="4" fill="currentColor" className="text-primary" />;
-        })}
-
-        {skillEntries.map(([skill], i) => {
-          const labelPoint = getPoint(i, 5.8, maxRadius);
-          const angle = (360 * i) / numPoints - 90;
-          const textAnchor =
-            angle > 45 && angle < 135 ? "start" : angle > 225 && angle < 315 ? "end" : "middle";
-
-          return (
-            <text
-              key={skill}
-              x={labelPoint.x}
-              y={labelPoint.y}
-              textAnchor={textAnchor}
-              className="fill-muted-foreground text-xs font-medium"
-              dominantBaseline="middle"
-            >
-              {skill.replace(/_/g, " ").length > 15
-                ? `${skill.replace(/_/g, " ").substring(0, 12)}...`
-                : skill.replace(/_/g, " ")}
-            </text>
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
-
-function QuickAction({
   href,
-  icon,
-  title,
-  description,
+  cta,
 }: {
-  href: string;
-  icon: React.ReactNode;
+  icon: typeof CalendarCheck;
   title: string;
   description: string;
+  href: string;
+  cta: string;
 }) {
   return (
-    <motion.div whileHover={{ x: 4 }} transition={{ type: "spring", stiffness: 320, damping: 20 }}>
-      <Link
-        href={href}
-        className="flex items-center gap-3 rounded-lg border border-border p-3 transition hover:border-primary/50 hover:bg-muted/30"
-      >
-        <div className="rounded-md bg-primary/15 p-2 text-primary">{icon}</div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">{title}</p>
-          <p className="text-xs text-muted-foreground">{description}</p>
-        </div>
-        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+    <div className="rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] p-8 text-center">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent-subtle)] text-[var(--accent)]">
+        <Icon className="h-6 w-6" />
+      </div>
+      <h3 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h3>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--text-secondary)]">{description}</p>
+      <Link href={href} className="btn-accent mt-5 inline-flex items-center gap-2 px-4 py-2.5 text-sm">
+        {cta}
+        <ArrowRight className="h-4 w-4" />
       </Link>
-    </motion.div>
+    </div>
   );
+}
+
+function calculateTrendChange(values: number[]) {
+  if (values.length < 2) return 0;
+  const midpoint = Math.floor(values.length / 2);
+  const previous = values.slice(0, midpoint).reduce((sum, value) => sum + value, 0);
+  const current = values.slice(midpoint).reduce((sum, value) => sum + value, 0);
+
+  if (previous === 0) return current > 0 ? 100 : 0;
+
+  return Math.round(((current - previous) / previous) * 100);
+}
+
+function buildFallbackActivity(totalTasks: number, streak: number) {
+  const entries: Array<{ date: string; count: number; level: number; dateLabel: string }> = [];
+  const today = new Date();
+
+  for (let offset = 83; offset >= 0; offset -= 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - offset);
+
+    const count = offset < streak ? 1 + ((totalTasks + offset) % 4) : (totalTasks + offset) % 5 === 0 ? 1 : 0;
+    const level = count === 0 ? 0 : count === 1 ? 1 : count === 2 ? 2 : count === 3 ? 3 : 4;
+
+    entries.push({
+      date: date.toISOString(),
+      dateLabel: date.toLocaleDateString(),
+      count,
+      level,
+    });
+  }
+
+  return entries;
 }
