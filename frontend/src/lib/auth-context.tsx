@@ -17,11 +17,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [token, setTokenState] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem("token");
-  });
+  const [token, setTokenState] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const fetchingRef = useRef(false);
+
+  // Read token from localStorage after mount to avoid hydration mismatch
+  useEffect(() => {
+    const stored = localStorage.getItem("token");
+    if (stored) {
+      setToken(stored);
+      setTokenState(stored);
+    }
+    setHydrated(true);
+  }, []);
 
   const fetchUser = useCallback(async () => {
     // Prevent overlapping fetches
@@ -45,11 +53,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!token || user) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchUser();
   }, [fetchUser, token, user]);
 
-  const loading = Boolean(token && !user);
+  const loading = !hydrated || Boolean(token && !user);
 
   const login = useCallback(async (newToken: string) => {
     setToken(newToken);

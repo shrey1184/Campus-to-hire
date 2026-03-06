@@ -1,29 +1,7 @@
 import type { Metadata } from "next";
-import { Poppins, JetBrains_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
-import { ThemeProvider } from "@/lib/theme-context";
-
-const poppins = Poppins({
-  variable: "--font-poppins",
-  subsets: ["latin"],
-  weight: ["400"],
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const playfairDisplay = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-  style: ["normal", "italic"],
-  display: "swap",
-});
+import { HeroUIProviderWrapper } from "@/components/HeroUIProviderWrapper";
 
 export const metadata: Metadata = {
   title: "Campus-for-Hire | AI-Powered Placement Prep",
@@ -37,14 +15,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-theme="light" suppressHydrationWarning>
+    <html lang="en" data-theme="dark" suppressHydrationWarning>
       <body
         suppressHydrationWarning
-        className={`${poppins.variable} ${jetbrainsMono.variable} ${playfairDisplay.variable} antialiased`}
+        className="antialiased"
+        style={
+          {
+            "--font-poppins": "'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+            "--font-jetbrains-mono": "'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace",
+            "--font-playfair": "'Playfair Display', Georgia, 'Times New Roman', serif",
+          } as React.CSSProperties
+        }
       >
-        <ThemeProvider>
+        <HeroUIProviderWrapper>
           <AuthProvider>{children}</AuthProvider>
-        </ThemeProvider>
+        </HeroUIProviderWrapper>
       </body>
     </html>
   );

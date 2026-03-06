@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
 import { interviewApi } from "@/lib/api";
 import type { Interview, ChatMessage } from "@/types";
 import { TARGET_ROLES, TARGET_COMPANIES } from "@/types";
+import { BlurFade } from "@/components/magic/BlurFade";
+import { ShimmerButton } from "@/components/magic/ShimmerButton";
+import { NumberTicker } from "@/components/magic/NumberTicker";
 import {
   MessageSquare,
   Send,
@@ -27,6 +31,7 @@ export default function InterviewPage() {
   const [ending, setEnding] = useState(false);
   const [selectedRole, setSelectedRole] = useState(user?.target_role || "sde");
   const [selectedCompany, setSelectedCompany] = useState("");
+  const [inputFocused, setInputFocused] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -79,58 +84,59 @@ export default function InterviewPage() {
 
   const isFinished = interview?.score !== null && interview?.score !== undefined;
 
-  // Setup screen
   if (!interview) {
     return (
-      <div className="space-y-6 animate-fade-in">
+      <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
         <div>
-          <h1 className="heading-lg font-bold flex items-center gap-2">
+          <h1 className="heading-lg flex items-center gap-2 font-bold">
             <MessageSquare className="h-6 w-6 text-primary" />
             Mock Interview
           </h1>
-          <p className="mt-1 text-muted-foreground body-text">
+          <p className="body-text mt-1 text-muted-foreground">
             Practice with an AI interviewer tailored to your target role
           </p>
         </div>
 
-        <div className="mx-auto max-w-lg rounded-2xl p-5 sm:p-6 card-dark">
+        <div className="mx-auto max-w-lg rounded-2xl p-5 card-dark sm:p-6">
           <h2 className="mb-4 heading-md font-semibold">Setup Your Interview</h2>
 
           <div className="space-y-4">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium">Target Role</label>
-              <select
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
-                className="w-full rounded-lg px-4 py-2.5 text-sm outline-none input-dark"
-              >
-                {TARGET_ROLES.map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
-                ))}
-              </select>
-            </div>
+            <BlurFade delay={0.1}>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">Target Role</label>
+                <select
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  className="input-dark w-full rounded-lg px-4 py-2.5 text-sm outline-none"
+                >
+                  {TARGET_ROLES.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </BlurFade>
 
-            <div>
-              <label className="mb-1.5 block text-sm font-medium">
-                Company (optional)
-              </label>
-              <select
-                value={selectedCompany}
-                onChange={(e) => setSelectedCompany(e.target.value)}
-                className="w-full rounded-lg px-4 py-2.5 text-sm outline-none input-dark"
-              >
-                <option value="">General Interview</option>
-                {TARGET_COMPANIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
+            <BlurFade delay={0.2}>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">Company (optional)</label>
+                <select
+                  value={selectedCompany}
+                  onChange={(e) => setSelectedCompany(e.target.value)}
+                  className="input-dark w-full rounded-lg px-4 py-2.5 text-sm outline-none"
+                >
+                  <option value="">General Interview</option>
+                  {TARGET_COMPANIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </BlurFade>
 
-            <button
-              onClick={handleStart}
-              disabled={starting}
-              className="flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold disabled:opacity-60 btn-accent"
-            >
+            <ShimmerButton onClick={handleStart} disabled={starting} className="w-full">
               {starting ? (
                 <Loader2 className="h-4 w-4 animate-spin spinner-glow" />
               ) : (
@@ -139,17 +145,20 @@ export default function InterviewPage() {
                   Start Interview
                 </>
               )}
-            </button>
+            </ShimmerButton>
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
-  // Interview screen
   return (
-    <div className="flex h-[calc(100vh-8rem)] flex-col animate-fade-in lg:h-[calc(100vh-3rem)]">
-      {/* Header */}
+    <motion.div
+      className="flex h-[calc(100vh-8rem)] flex-col lg:h-[calc(100vh-3rem)]"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
       <div className="mb-4 flex flex-col gap-3 border-b border-border/40 pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-base font-bold sm:text-lg">
@@ -167,26 +176,25 @@ export default function InterviewPage() {
             <button
               onClick={handleEnd}
               disabled={ending}
-              className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground btn-outline"
+              className="btn-outline flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground"
             >
               {ending ? <Loader2 className="h-3 w-3 animate-spin spinner-glow" /> : <StopCircle className="h-3 w-3" />}
               End
             </button>
           )}
-          <button
-            onClick={handleNewInterview}
-            className="rounded-lg px-3 py-1.5 text-xs font-medium btn-outline"
-          >
+          <button onClick={handleNewInterview} className="btn-outline rounded-lg px-3 py-1.5 text-xs font-medium">
             New Interview
           </button>
         </div>
       </div>
 
-      {/* Chat */}
       <div className="flex-1 space-y-4 overflow-y-auto">
         {interview.messages.map((msg: ChatMessage, i: number) => (
-          <div
+          <motion.div
             key={i}
+            initial={{ opacity: 0, x: msg.role === "user" ? 20 : -20, y: 10 }}
+            animate={{ opacity: 1, x: 0, y: 0 }}
+            transition={{ duration: 0.25 }}
             className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}
           >
             {msg.role === "assistant" && (
@@ -196,18 +204,14 @@ export default function InterviewPage() {
             )}
             <div
               className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-sm sm:max-w-[80%] sm:px-4 sm:py-3 ${
-                msg.role === "user"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted"
+                msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
               }`}
             >
               <ReactMarkdown
                 components={{
                   p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
                   code: ({ children }) => (
-                    <code className="rounded bg-background/50 px-1 py-0.5 text-xs font-mono">
-                      {children}
-                    </code>
+                    <code className="rounded bg-background/50 px-1 py-0.5 text-xs font-mono">{children}</code>
                   ),
                 }}
               >
@@ -219,31 +223,39 @@ export default function InterviewPage() {
                 <User className="h-4 w-4" />
               </div>
             )}
-          </div>
+          </motion.div>
         ))}
 
-        {/* Score card */}
         {isFinished && (
-          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 text-center card-glass">
+          <div className="card-glass rounded-2xl border border-primary/30 bg-primary/5 p-6 text-center">
             <Trophy className="mx-auto mb-2 h-10 w-10 text-primary" />
-            <p className="text-2xl font-bold">{interview.score}/100</p>
+            <p className="text-2xl font-bold">
+              <NumberTicker value={interview.score || 0} />
+              /100
+            </p>
             <div className="mx-auto mb-3 flex justify-center gap-1">
               {[1, 2, 3, 4, 5].map((s) => (
-                <Star
+                <motion.div
                   key={s}
-                  className={`h-5 w-5 ${
-                    s <= Math.round((interview.score || 0) / 20)
-                      ? "fill-primary text-primary"
-                      : "text-muted"
-                  }`}
-                />
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: s * 0.08, type: "spring", stiffness: 320, damping: 18 }}
+                >
+                  <Star
+                    className={`h-5 w-5 ${
+                      s <= Math.round((interview.score || 0) / 20) ? "fill-primary text-primary" : "text-muted"
+                    }`}
+                  />
+                </motion.div>
               ))}
             </div>
             {interview.feedback && (
-              <div className="text-left text-sm">
-                <p className="mb-1 font-semibold">Feedback:</p>
-                <ReactMarkdown>{interview.feedback}</ReactMarkdown>
-              </div>
+              <BlurFade delay={0.12}>
+                <div className="text-left text-sm">
+                  <p className="mb-1 font-semibold">Feedback:</p>
+                  <ReactMarkdown>{interview.feedback}</ReactMarkdown>
+                </div>
+              </BlurFade>
             )}
           </div>
         )}
@@ -251,31 +263,35 @@ export default function InterviewPage() {
         <div ref={chatEndRef} />
       </div>
 
-      {/* Input */}
       {!isFinished && (
-        <div className="mt-4 flex gap-2 border-t border-border/40 pt-4">
+        <motion.div
+          className="mt-4 flex gap-2 border-t border-border/40 pt-4"
+          animate={{
+            boxShadow: inputFocused ? "0 0 0 1px var(--accent), 0 0 20px var(--accent-glow)" : "0 0 0 0 transparent",
+          }}
+          transition={{ duration: 0.2 }}
+          style={{ borderRadius: "1rem", paddingInline: "0.25rem" }}
+        >
           <input
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
             placeholder="Type your answer..."
             disabled={loading}
-            className="flex-1 rounded-lg px-4 py-2.5 text-sm outline-none disabled:opacity-50 input-dark"
+            className="input-dark flex-1 rounded-lg px-4 py-2.5 text-sm outline-none disabled:opacity-50"
           />
           <button
             onClick={handleSend}
             disabled={loading || !message.trim()}
-            className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50 btn-accent"
+            className="btn-accent flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50"
           >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin spinner-glow" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin spinner-glow" /> : <Send className="h-4 w-4" />}
           </button>
-        </div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }

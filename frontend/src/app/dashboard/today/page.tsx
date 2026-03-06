@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { dailyPlanApi } from "@/lib/api";
 import type { DailyPlan, Task } from "@/types";
 import { TASK_TYPE_COLORS } from "@/types";
+import { BlurFade } from "@/components/magic/BlurFade";
 import {
   CalendarCheck,
   Loader2,
@@ -90,9 +92,7 @@ export default function TodayPage() {
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <CalendarCheck className="mb-4 h-12 w-12 text-muted-foreground" />
         <h2 className="mb-2 text-xl font-semibold">No Plan For Today</h2>
-        <p className="text-sm text-muted-foreground">
-          Generate a roadmap first to get daily plans.
-        </p>
+        <p className="text-sm text-muted-foreground">Generate a roadmap first to get daily plans.</p>
       </div>
     );
   }
@@ -102,139 +102,152 @@ export default function TodayPage() {
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
   const totalMinutes = plan.tasks.reduce((s, t) => s + (t.duration_minutes || 30), 0);
   const allDone = completed === total && total > 0;
+  const ringCircumference = 2 * Math.PI * 42;
+  const ringOffset = ringCircumference - (pct / 100) * ringCircumference;
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
+    <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
       <div>
-        <h1 className="heading-lg font-bold flex items-center gap-2">
+        <h1 className="heading-lg flex items-center gap-2 font-bold">
           <CalendarCheck className="h-6 w-6 text-primary" />
           Today&apos;s Plan
         </h1>
-        <p className="mt-1 text-muted-foreground body-text">
+        <p className="body-text mt-1 text-muted-foreground">
           Week {plan.week}, Day {plan.day}
         </p>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        <div className="rounded-xl p-4 text-center card-dark">
-          <p className="text-xl font-bold text-primary sm:text-2xl">{completed}/{total}</p>
-          <p className="text-xs text-muted-foreground">Tasks Done</p>
+      <BlurFade delay={0.1}>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+          <div className="rounded-xl p-4 text-center card-dark">
+            <p className="text-xl font-bold text-primary sm:text-2xl">
+              {completed}/{total}
+            </p>
+            <p className="text-xs text-muted-foreground">Tasks Done</p>
+          </div>
+          <div className="rounded-xl p-4 text-center card-dark">
+            <div className="mx-auto flex w-fit items-center justify-center">
+              <svg className="h-24 w-24 -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--bg-elevated)" strokeWidth="8" />
+                <motion.circle
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  fill="none"
+                  stroke="var(--accent)"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  initial={{ strokeDashoffset: ringCircumference }}
+                  animate={{ strokeDashoffset: ringOffset }}
+                  transition={{ type: "spring", stiffness: 120, damping: 20 }}
+                  style={{ strokeDasharray: ringCircumference }}
+                />
+              </svg>
+              <div className="absolute text-center">
+                <p className="text-xl font-bold sm:text-2xl">{pct}%</p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Complete</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl p-4 text-center card-dark">
+            <p className="flex items-center justify-center gap-1 text-xl font-bold sm:text-2xl">
+              <Clock className="h-4 w-4" />
+              {Math.round((totalMinutes / 60) * 10) / 10}h
+            </p>
+            <p className="text-xs text-muted-foreground">Total Time</p>
+          </div>
         </div>
-        <div className="rounded-xl p-4 text-center card-dark">
-          <p className="text-xl font-bold sm:text-2xl">{pct}%</p>
-          <p className="text-xs text-muted-foreground">Complete</p>
-        </div>
-        <div className="rounded-xl p-4 text-center card-dark">
-          <p className="flex items-center justify-center gap-1 text-xl font-bold sm:text-2xl">
-            <Clock className="h-4 w-4" />
-            {Math.round(totalMinutes / 60 * 10) / 10}h
-          </p>
-          <p className="text-xs text-muted-foreground">Total Time</p>
-        </div>
-      </div>
+      </BlurFade>
 
-      {/* Progress bar */}
       <div className="rounded-xl p-4 card-dark">
         <div className="mb-2 flex items-center justify-between text-sm">
           <span className="font-medium">Daily Progress</span>
-          <span className="text-muted-foreground tabular-nums">{pct}%</span>
+          <span className="tabular-nums text-muted-foreground">{pct}%</span>
         </div>
         <div className="h-3 rounded-full bg-muted">
-          <div
-            className={`h-3 rounded-full transition-all ${
-              allDone
-                ? "bg-gradient-to-r from-primary to-amber-500"
-                : "bg-gradient-to-r from-primary to-amber-600"
-            }`}
-            style={{ width: `${pct}%` }}
+          <motion.div
+            className={`h-3 rounded-full ${allDone ? "bg-gradient-to-r from-primary to-amber-500" : "bg-gradient-to-r from-primary to-amber-600"}`}
+            initial={{ width: 0 }}
+            animate={{ width: `${pct}%` }}
+            transition={{ type: "spring", stiffness: 120, damping: 20 }}
           />
         </div>
       </div>
 
-      {/* All done banner */}
-      {allDone && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/10 p-4 card-glass">
-          <div className="flex items-center gap-3">
-            <Trophy className="h-8 w-8 text-primary flex-shrink-0" />
-            <div>
-              <p className="font-semibold text-primary">
-                All tasks completed!
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Great job! Move on to the next day when you&apos;re ready.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleNextDay}
-            disabled={advancing}
-            className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold whitespace-nowrap disabled:opacity-60 btn-accent"
+      <AnimatePresence>
+        {allDone && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 220, damping: 18 }}
+            className="card-glass flex items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/10 p-4"
           >
-            {advancing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <ArrowRight className="h-4 w-4" />
-            )}
-            Next Day
-          </button>
-        </div>
-      )}
+            <div className="flex items-center gap-3">
+              <Trophy className="h-8 w-8 flex-shrink-0 text-primary" />
+              <div>
+                <p className="font-semibold text-primary">All tasks completed!</p>
+                <p className="text-sm text-muted-foreground">
+                  Great job! Move on to the next day when you&apos;re ready.
+                </p>
+              </div>
+            </div>
+            <motion.button
+              onClick={handleNextDay}
+              disabled={advancing}
+              whileHover={{ scale: advancing ? 1 : 1.03 }}
+              whileTap={{ scale: advancing ? 1 : 0.97 }}
+              transition={{ type: "spring", stiffness: 320, damping: 20 }}
+              className="btn-accent flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-60"
+            >
+              {advancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+              Next Day
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Task list */}
       <div className="space-y-3">
-        {plan.tasks.map((task) => (
-          <div
+        {plan.tasks.map((task, index) => (
+          <motion.div
             key={task.id}
-            className={`flex items-start gap-3 sm:gap-4 rounded-xl border p-3.5 sm:p-4 transition ${
+            layout
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05, duration: 0.3 }}
+            className={`flex items-start gap-3 rounded-xl border p-3.5 transition sm:gap-4 sm:p-4 ${
               task.completed
-                ? "border-primary/40 bg-primary/10 card-glass"
-                : "border-border/50 bg-card hover:border-primary/30 card-dark card-interactive"
+                ? "card-glass border-primary/40 bg-primary/10"
+                : "card-dark card-interactive border-border/50 bg-card hover:border-primary/30"
             }`}
           >
-            {/* Toggle */}
-            <button
-              onClick={() => handleToggle(task)}
-              disabled={toggling === task.id}
-              className="mt-0.5 flex-shrink-0"
-            >
+            <button onClick={() => handleToggle(task)} disabled={toggling === task.id} className="mt-0.5 flex-shrink-0">
               {toggling === task.id ? (
                 <Loader2 className="h-5 w-5 animate-spin text-primary spinner-glow" />
-              ) : task.completed ? (
-                <CheckCircle2 className="h-5 w-5 text-primary" />
               ) : (
-                <Circle className="h-5 w-5 text-muted-foreground hover:text-primary" />
+                <motion.div
+                  animate={task.completed ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {task.completed ? (
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                  ) : (
+                    <Circle className="h-5 w-5 text-muted-foreground hover:text-primary" />
+                  )}
+                </motion.div>
               )}
             </button>
 
-            {/* Content */}
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">
-                  {TYPE_ICONS[task.type] || <BookOpen className="h-4 w-4" />}
-                </span>
-                <p
-                  className={`font-medium ${
-                    task.completed ? "line-through text-muted-foreground" : ""
-                  }`}
-                >
-                  {task.title}
-                </p>
+                <span className="text-muted-foreground">{TYPE_ICONS[task.type] || <BookOpen className="h-4 w-4" />}</span>
+                <p className={`font-medium ${task.completed ? "text-muted-foreground line-through" : ""}`}>{task.title}</p>
               </div>
-              {task.description && (
-                <p className="mt-1 text-sm text-muted-foreground">{task.description}</p>
-              )}
+              {task.description && <p className="mt-1 text-sm text-muted-foreground">{task.description}</p>}
               {task.resources && task.resources.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {task.resources.map((r, i) => (
-                    <a
-                      key={i}
-                      href={r.url || "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="link-glow text-xs"
-                    >
+                    <a key={i} href={r.url || "#"} target="_blank" rel="noopener noreferrer" className="link-glow text-xs">
                       Resource: {r.title}
                     </a>
                   ))}
@@ -242,7 +255,6 @@ export default function TodayPage() {
               )}
             </div>
 
-            {/* Meta */}
             <div className="flex flex-col items-end gap-1">
               {task.duration_minutes && (
                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -258,9 +270,9 @@ export default function TodayPage() {
                 {task.type}
               </span>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
-    </div>
+    </motion.div>
   );
 }

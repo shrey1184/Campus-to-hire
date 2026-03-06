@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, type ReactNode } from "react";
+import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   Map,
@@ -11,11 +12,9 @@ import {
   MessageSquare,
   FileSearch,
   LogOut,
-  User,
   Loader2,
 } from "lucide-react";
 import Logo from "@/components/Logo";
-import ThemeToggle from "@/components/ThemeToggle";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -62,11 +61,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background page-base">
-      {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-border/40 bg-card lg:block card-glass">
+      {/* Desktop Sidebar */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-[var(--border-default)] bg-[var(--glass-bg)] backdrop-blur-xl lg:block noise-texture">
         <div className="flex h-full flex-col">
           {/* Logo */}
-          <div className="flex h-16 items-center border-b border-border/40 px-6">
+          <div className="flex h-16 items-center border-b border-[var(--border-default)] px-6">
             <Logo size="md" />
           </div>
 
@@ -75,37 +74,66 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href;
               return (
-                <Link
+                <motion.div
                   key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium nav-link ${
-                    isActive
-                      ? "nav-active text-primary"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                  }`}
+                  whileHover={{ x: 4 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
+                  <Link
+                    href={item.href}
+                    className={`relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                      isActive
+                        ? "text-[var(--accent)]"
+                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeNavIndicator"
+                        className="absolute left-0 w-[3px] h-6 bg-[var(--accent)] rounded-r-full"
+                        initial={false}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      />
+                    )}
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeNavBg"
+                        className="absolute inset-0 bg-[var(--accent-subtle)] rounded-lg"
+                        initial={false}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-3">
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                    </span>
+                  </Link>
+                </motion.div>
               );
             })}
           </nav>
 
           {/* User */}
-          <div className="border-t border-border/40 p-4">
+          <div className="border-t border-[var(--border-default)] p-4">
             <div className="mb-3 flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                {user.name?.charAt(0).toUpperCase() || "U"}
-              </div>
+              <motion.div
+                className="relative group cursor-pointer"
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="absolute -inset-[2px] bg-gradient-to-r from-[var(--accent)] to-[var(--accent-hover)] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm" />
+                <div className="relative h-9 w-9 rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] flex items-center justify-center text-sm font-bold text-[var(--text-inverse)]">
+                  {user.name?.charAt(0).toUpperCase() || "U"}
+                </div>
+              </motion.div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{user.name}</p>
-                <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                <p className="truncate text-xs text-[var(--text-muted)]">{user.email}</p>
               </div>
-              <ThemeToggle />
             </div>
             <button
               onClick={logout}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground btn-outline"
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] btn-outline hover:text-[var(--text-primary)] transition-colors"
             >
               <LogOut className="h-4 w-4" />
               Sign out
@@ -115,32 +143,46 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Mobile header */}
-      <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b border-border/40 bg-card px-4 lg:hidden card-glass">
+      <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b border-[var(--border-default)] bg-[var(--glass-bg)] backdrop-blur-xl px-4 lg:hidden">
         <Link href="/dashboard">
           <Logo size="sm" />
         </Link>
         <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <Link href="/dashboard" className="rounded-full bg-primary/10 p-2 text-primary">
-            <User className="h-4 w-4" />
-          </Link>
+          <motion.div
+            className="relative group cursor-pointer"
+            whileHover={{ scale: 1.05 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="absolute -inset-[2px] bg-gradient-to-r from-[var(--accent)] to-[var(--accent-hover)] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm" />
+            <div className="relative h-8 w-8 rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] flex items-center justify-center text-xs font-bold text-[var(--text-inverse)]">
+              {user.name?.charAt(0).toUpperCase() || "U"}
+            </div>
+          </motion.div>
         </div>
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border/40 bg-card lg:hidden card-glass">
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-[var(--border-default)] bg-[var(--glass-bg)] backdrop-blur-xl lg:hidden">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-1 flex-col items-center gap-1 py-2 text-xs ${
-                isActive ? "text-primary" : "text-muted-foreground"
-              }`}
+              className="relative flex flex-1 flex-col items-center gap-1 py-3 text-xs"
             >
-              <item.icon className="h-4 w-4" />
-              <span className="truncate">{item.label.split(" ")[0]}</span>
+              {isActive && (
+                <motion.div
+                  layoutId="mobileNavPill"
+                  className="absolute inset-x-2 inset-y-1 bg-[var(--accent-subtle)] rounded-xl"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                />
+              )}
+              <span className={`relative z-10 ${isActive ? "text-[var(--accent)]" : "text-[var(--text-muted)]"}`}>
+                <item.icon className="h-4 w-4 mx-auto mb-0.5" />
+                <span className="truncate">{item.label.split(" ")[0]}</span>
+              </span>
             </Link>
           );
         })}

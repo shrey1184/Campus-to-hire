@@ -1,8 +1,5 @@
 @import "tailwindcss";
 
-/* Override Tailwind dark variant to use data-theme attribute */
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
-
 /* ================================================================
    CAMPUS-FOR-HIRE — DESIGN SYSTEM
    ================================================================
@@ -98,99 +95,6 @@
   --color-scheme:     dark;
 
   /* ── Tailwind Token Mapping (DO NOT remove — Tailwind reads these) */
-  --background:           var(--bg-base);
-  --foreground:           var(--text-primary);
-  --card:                 var(--bg-surface);
-  --card-foreground:      var(--text-primary);
-  --primary:              var(--accent);
-  --primary-foreground:   var(--text-inverse);
-  --secondary:            var(--bg-elevated);
-  --secondary-foreground: var(--text-secondary);
-  --muted:                var(--bg-elevated);
-  --muted-foreground:     var(--text-muted);
-  --accent-color:         var(--bg-overlay);
-  --accent-foreground:    var(--text-primary);
-  --border:               var(--border-default);
-  --input:                var(--input-bg);
-  --ring:                 var(--ring-color);
-}
-
-/* ─── Light Theme ─────────────────────────────────────────────── */
-[data-theme="light"] {
-  /* ── Background Scale ───────────────────────────────────────── */
-  --bg-base:       #f8f9fa;
-  --bg-surface:    #ffffff;
-  --bg-elevated:   #f0f1f3;
-  --bg-overlay:    #e4e6e9;
-
-  /* ── Text Scale ─────────────────────────────────────────────── */
-  --text-primary:   #1a1a2e;
-  --text-secondary: #4a4a5a;
-  --text-muted:     #8a8a9a;
-  --text-inverse:   #ffffff;
-
-  /* ── Brand / Accent (matches "Campus for Hire" text color in light mode) ── */
-  --accent:         #1a1a2e;
-  --accent-hover:   #2d2d4a;
-  --accent-subtle:  rgba(26, 26, 46, 0.08);
-  --accent-glow:    rgba(26, 26, 46, 0.14);
-
-  /* ── Borders ────────────────────────────────────────────────── */
-  --border-default: #dfe1e6;
-  --border-hover:   #c1c4cb;
-  --border-active:  var(--accent);
-
-  /* ── Functional Colors ──────────────────────────────────────── */
-  --destructive:    #d93036;
-  --success:        #268c55;
-  --warning:        var(--accent);
-  --info:           #2563eb;
-
-  /* ── Input ──────────────────────────────────────────────────── */
-  --input-bg:       #f4f5f7;
-
-  /* ── Shadows (lighter for light theme) ──────────────────────── */
-  --shadow-sm:    0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md:    0 4px 14px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
-  --shadow-lg:    0 8px 28px rgba(0, 0, 0, 0.10), 0 4px 12px rgba(0, 0, 0, 0.05);
-  --shadow-glow:  0 0 20px var(--accent-glow);
-
-  /* ── Hero-section (light version) ───────────────────────────── */
-  --hero-bg:                #ffffff;
-  --hero-border:            #dfe1e6;
-  --hero-badge-bg:          #1a1a2e;
-  --hero-badge-text:        #ffffff;
-  --hero-subtitle-text:     #6b7280;
-  --hero-login-bg:          #f0f1f3;
-  --hero-login-border:      #dfe1e6;
-  --hero-login-text:        #1a1a2e;
-  --hero-cta-bg:            #1a1a2e;
-  --hero-cta-text:          #ffffff;
-  --hero-title-text:        #1a1a2e;
-  --hero-progress-track:    #e4e6e9;
-  --hero-progress-fill:     #1a1a2e;
-  --hero-dot-glow:          rgba(26,26,46,0.25);
-  --hero-card-bg:           #f8f9fa;
-  --hero-card-text:         #1a1a2e;
-  --hero-card-subtitle:     #4a4a5a;
-  --hero-card-btn-bg:       #1a1a2e;
-  --hero-card-btn-text:     #ffffff;
-  --hero-action-border:     #dfe1e6;
-  --hero-action-text:       #1a1a2e;
-  --hero-action-hover:      #f0f1f3;
-  --hero-bottom-border:     #e4e6e9;
-  --hero-grid-line:         rgba(0,0,0,0.03);
-
-  /* ── Glass Card ─────────────────────────────────────────────── */
-  --glass-bg:         rgba(255, 255, 255, 0.85);
-
-  /* ── Dot Grid ───────────────────────────────────────────────── */
-  --dot-grid-color:   rgba(0, 0, 0, 0.03);
-
-  /* ── Color Scheme ───────────────────────────────────────────── */
-  --color-scheme:     light;
-
-  /* ── Tailwind Token Mapping ─────────────────────────────────── */
   --background:           var(--bg-base);
   --foreground:           var(--text-primary);
   --card:                 var(--bg-surface);
@@ -464,13 +368,6 @@ body::before {
   color: transparent;
 }
 
-[data-theme="light"] .text-gradient {
-  background: linear-gradient(135deg, #1a1a2e, #4a4a7a);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
 /* ─── Pill / Badge ────────────────────────────────────────────── */
 .pill-badge {
   display: inline-flex;
@@ -491,6 +388,26 @@ body::before {
   max-width: 76rem;
   margin-left: auto;
   margin-right: auto;
+}
+
+/* ─── Noise Texture ───────────────────────────────────────────── */
+.noise-texture {
+  position: relative;
+}
+
+.noise-texture::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  z-index: 0;
+}
+
+.noise-texture > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* ─── Responsive ──────────────────────────────────────────────── */
@@ -516,4 +433,78 @@ body::before {
   .pulse-card {
     animation: none;
   }
+}
+
+/* Animation Keyframes */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes aurora {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; box-shadow: 0 0 20px var(--accent-glow); }
+  50% { opacity: 1; box-shadow: 0 0 40px var(--accent-glow); }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+@keyframes marquee-vertical {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-100%); }
+}
+
+/* Noise texture overlay */
+.noise-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Utility classes */
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+.animate-aurora {
+  background-size: 400% 400%;
+  animation: aurora 15s ease infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
 }

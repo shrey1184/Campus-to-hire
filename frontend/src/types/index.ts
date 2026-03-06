@@ -55,6 +55,7 @@ export interface Roadmap {
   user_id: string;
   content: RoadmapContent;
   pace: string;
+  target_role?: string | null;
   total_weeks: number;
   current_week: number;
   current_day: number;
@@ -109,6 +110,7 @@ export interface DailyPlan {
   week: number;
   day: number;
   tasks: Task[];
+  focus_area?: string | null;
   created_at: string;
 }
 
