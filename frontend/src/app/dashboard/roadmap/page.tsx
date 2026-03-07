@@ -94,14 +94,14 @@ export default function RoadmapPage() {
           nextRoadmap = await roadmapApi.generateWeek(initialRoadmap.id, weekNumber);
           setRoadmap(nextRoadmap);
         } catch {
-          setError(`Failed to generate week ${weekNumber}. You can retry to continue.`);
+          setError(t("roadmap.errorGenerateWeek", { week: weekNumber }));
         }
       }
     } catch (generationError) {
       setError(
         generationError instanceof Error
           ? generationError.message
-          : "Failed to generate roadmap",
+          : t("roadmap.errorGenerate"),
       );
     } finally {
       setGenerating(false);
@@ -138,7 +138,7 @@ export default function RoadmapPage() {
       setError(
         translationError instanceof Error
           ? translationError.message
-          : "Failed to translate roadmap",
+          : t("roadmap.errorTranslate"),
       );
     } finally {
       setTranslatingRoadmap(false);
@@ -261,18 +261,18 @@ export default function RoadmapPage() {
               <div className="mt-4 space-y-3">
                 <GuideStep
                   number="01"
-                  title="Generate the plan"
-                  description="Create the multi-week structure using your current profile and target role."
+                  title={t("roadmap.guide.generateTitle")}
+                  description={t("roadmap.guide.generateDescription")}
                 />
                 <GuideStep
                   number="02"
-                  title="Expand the active week"
-                  description="Open the current week first. That is where your execution focus should live."
+                  title={t("roadmap.guide.expandTitle")}
+                  description={t("roadmap.guide.expandDescription")}
                 />
                 <GuideStep
                   number="03"
-                  title="Go day by day"
-                  description="Use each day as a compact sprint. The roadmap matters only if the daily tasks get finished."
+                  title={t("roadmap.guide.dailyTitle")}
+                  description={t("roadmap.guide.dailyDescription")}
                 />
               </div>
             </div>
@@ -289,16 +289,19 @@ export default function RoadmapPage() {
       {generating && roadmap ? (
         <BlurFade delay={0.08}>
           <div className="card-dark rounded-[24px] p-5 sm:p-6">
-            <div className="mb-3 flex items-center justify-between text-sm">
+              <div className="mb-3 flex items-center justify-between text-sm">
               <span className="text-[var(--text-secondary)]">
                 {generatingWeek
-                  ? `Generating week ${generatingWeek} of ${roadmap.total_weeks}`
-                  : "Preparing roadmap structure"}
+                  ? t("roadmap.progress.generatingWeek", {
+                      week: generatingWeek,
+                      total: roadmap.total_weeks,
+                    })
+                  : t("roadmap.preparingStructure")}
               </span>
               <span className="font-semibold text-[var(--text-primary)]">
                 {generatingWeek
                   ? `${Math.round(((generatingWeek - 1) / roadmap.total_weeks) * 100)}%`
-                  : "Starting"}
+                  : t("roadmap.starting")}
               </span>
             </div>
             <div className="h-3 overflow-hidden rounded-full bg-white/5">
@@ -329,7 +332,7 @@ export default function RoadmapPage() {
               <div className="space-y-3">
                 <SnapshotRow
                   label={t("roadmap.targetRole")}
-                  value={roadmap.target_role?.replace(/_/g, " ") || "Not specified"}
+                  value={roadmap.target_role?.replace(/_/g, " ") || t("common.notSpecified")}
                 />
                 <SnapshotRow
                   label={t("roadmap.completedTasks")}
@@ -337,11 +340,14 @@ export default function RoadmapPage() {
                 />
                 <SnapshotRow
                   label={t("roadmap.activePosition")}
-                  value={`Week ${roadmap.current_week}, Day ${roadmap.current_day}`}
+                  value={t("roadmap.activePositionValue", {
+                    week: roadmap.current_week,
+                    day: roadmap.current_day,
+                  })}
                 />
                 <SnapshotRow
                   label={t("roadmap.estimatedLength")}
-                  value={`${roadmap.total_weeks} weeks`}
+                  value={t("roadmap.estimatedLengthValue", { weeks: roadmap.total_weeks })}
                 />
               </div>
 
@@ -366,7 +372,7 @@ export default function RoadmapPage() {
             <div className="card-dark rounded-[24px] p-5 sm:p-6">
               <div className="mb-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                  Step 1 to {roadmap.total_weeks}
+                  {t("roadmap.timeline.stepRange", { total: roadmap.total_weeks })}
                 </p>
                 <h2 className="heading-md mt-1">{t("roadmap.timeline")}</h2>
               </div>
@@ -417,11 +423,11 @@ export default function RoadmapPage() {
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                                  Week {week.week}
+                                  {t("roadmap.weekLabel", { week: week.week })}
                                 </span>
                                 {isCurrent ? (
                                   <span className="rounded-full border border-[var(--accent)]/25 bg-black/25 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">
-                                    Current
+                                    {t("common.currentBadge")}
                                   </span>
                                 ) : null}
                               </div>
@@ -430,7 +436,7 @@ export default function RoadmapPage() {
                               </h3>
                               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
                                 {week.description ||
-                                  "Structured learning, deliberate practice, and interview-oriented reinforcement."}
+                                  t("roadmap.weekFallbackDescription")}
                               </p>
                             </div>
 
@@ -497,7 +503,8 @@ export default function RoadmapPage() {
                                       </div>
                                       <div className="min-w-0 flex-1">
                                         <p className="text-sm font-semibold text-[var(--text-primary)]">
-                                          {day.title || `Day ${day.day || dayIndex + 1}`}
+                                          {day.title ||
+                                            t("roadmap.dayLabel", { day: day.day || dayIndex + 1 })}
                                         </p>
                                         <p className="mt-1 text-xs text-[var(--text-secondary)]">
                                           {t("roadmap.tasksCompleted", {

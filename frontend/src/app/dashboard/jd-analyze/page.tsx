@@ -54,7 +54,7 @@ export default function JDAnalyzePage() {
       const result = await jdApi.analyze(jdText.trim());
       setAnalysis(result);
     } catch (analysisError) {
-      setError(analysisError instanceof Error ? analysisError.message : "Analysis failed");
+      setError(analysisError instanceof Error ? analysisError.message : t("jd.errorAnalyze"));
     } finally {
       setLoading(false);
     }
@@ -124,9 +124,21 @@ export default function JDAnalyzePage() {
                 {t("jd.stepByStep")}
               </p>
               <div className="mt-4 space-y-3">
-                <GuideStep number="01" title="Paste the JD" description="Use the full description, not only the bullet list, so the role intent is preserved." />
-                <GuideStep number="02" title="Inspect the gaps" description="The missing skills matter more than the skills you already have." />
-                <GuideStep number="03" title="Feed it back" description="Use the recommendations to update your roadmap and mock-interview focus." />
+                <GuideStep
+                  number="01"
+                  title={t("jd.guide.pasteTitle")}
+                  description={t("jd.guide.pasteDescription")}
+                />
+                <GuideStep
+                  number="02"
+                  title={t("jd.guide.inspectTitle")}
+                  description={t("jd.guide.inspectDescription")}
+                />
+                <GuideStep
+                  number="03"
+                  title={t("jd.guide.feedbackTitle")}
+                  description={t("jd.guide.feedbackDescription")}
+                />
               </div>
             </div>
           </div>
@@ -139,7 +151,7 @@ export default function JDAnalyzePage() {
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                  Step 1
+                  {t("common.step", { step: 1 })}
                 </p>
                 <h2 className="heading-md mt-1">{t("jd.input")}</h2>
               </div>
@@ -186,7 +198,7 @@ export default function JDAnalyzePage() {
           <div className="card-dark rounded-[24px] p-5 sm:p-6">
               <div className="mb-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                  Step 2
+                  {t("common.step", { step: 2 })}
                 </p>
                 <h2 className="heading-md mt-1">{t("jd.summary")}</h2>
               </div>
@@ -198,7 +210,9 @@ export default function JDAnalyzePage() {
                     <div>
                       <p className="text-sm font-semibold text-[var(--text-primary)]">{analysis.role}</p>
                       <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                        {analysis.company ? `${analysis.company} role detected` : "Company not explicitly identified"}
+                        {analysis.company
+                          ? t("common.companyDetected", { company: analysis.company })
+                          : t("common.companyUnknown")}
                       </p>
                     </div>
                     <div className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-sm font-semibold text-[var(--accent)]">
@@ -208,15 +222,24 @@ export default function JDAnalyzePage() {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <SummaryRow label="Matched skills" value={`${summary.matchedSkills}/${summary.totalRequired}`} />
-                  <SummaryRow label="Missing or weak areas" value={String(summary.gapCount)} />
-                  <SummaryRow label="Recommendations" value={String(analysis.recommendations.length)} />
-                  <SummaryRow label="Extracted skills" value={String(analysis.required_skills.length)} />
+                  <SummaryRow
+                    label={t("jd.summary.matchedSkills")}
+                    value={`${summary.matchedSkills}/${summary.totalRequired}`}
+                  />
+                  <SummaryRow label={t("jd.summary.missingAreas")} value={String(summary.gapCount)} />
+                  <SummaryRow
+                    label={t("jd.summary.recommendations")}
+                    value={String(analysis.recommendations.length)}
+                  />
+                  <SummaryRow
+                    label={t("jd.summary.extractedSkills")}
+                    value={String(analysis.required_skills.length)}
+                  />
                 </div>
 
                 <div className="rounded-[22px] border border-white/8 bg-white/[0.02] p-4">
                   <div className="mb-3 flex items-center justify-between text-sm">
-                    <span className="text-[var(--text-secondary)]">Estimated fit</span>
+                    <span className="text-[var(--text-secondary)]">{t("jd.summary.estimatedFit")}</span>
                     <span className="font-semibold text-[var(--text-primary)]">{summary.matchScore}%</span>
                   </div>
                   <div className="h-3 overflow-hidden rounded-full bg-white/5">
@@ -252,9 +275,9 @@ export default function JDAnalyzePage() {
             <div className="card-dark rounded-[24px] p-5 sm:p-6">
               <div className="mb-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                  Step 3
+                  {t("common.step", { step: 3 })}
                 </p>
-                <h2 className="heading-md mt-1">Inspect required skills</h2>
+                <h2 className="heading-md mt-1">{t("jd.requiredSkillsInspect")}</h2>
               </div>
 
               <div className="space-y-3">
@@ -289,9 +312,9 @@ export default function JDAnalyzePage() {
                 <div className="mb-5 flex items-center justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                      Gap analysis
+                      {t("jd.gapAnalysis")}
                     </p>
-                    <h2 className="heading-md mt-1">What still needs work</h2>
+                    <h2 className="heading-md mt-1">{t("jd.whatNeedsWork")}</h2>
                   </div>
                   <Target className="h-5 w-5 text-[var(--accent)]" />
                 </div>
@@ -352,16 +375,19 @@ export default function JDAnalyzePage() {
                     })}
                   </div>
                 ) : (
-                  <EmptyPanel title="No major gaps detected" description="The JD does not show obvious missing skills against your current profile." />
+                  <EmptyPanel
+                    title={t("jd.noMajorGaps")}
+                    description={t("jd.noMajorGapsDescription")}
+                  />
                 )}
               </div>
 
               <div className="card-dark rounded-[24px] p-5 sm:p-6">
                 <div className="mb-5">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                    Action list
+                    {t("jd.actionList")}
                   </p>
-                  <h2 className="heading-md mt-1">What to do next</h2>
+                  <h2 className="heading-md mt-1">{t("jd.nextActions")}</h2>
                 </div>
 
                 <div className="space-y-3">

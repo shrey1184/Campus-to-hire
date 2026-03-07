@@ -196,7 +196,9 @@ export default function InterviewPage() {
         <div>
           <h1 className="flex items-center gap-2 text-base font-bold sm:text-lg">
             <MessageSquare className="h-5 w-5 text-primary" />
-            {interview.role.replace(/_/g, " ").toUpperCase()} Interview
+            {t("interview.roleHeader", {
+              role: interview.role.replace(/_/g, " ").toUpperCase(),
+            })}
             {interview.company && ` - ${interview.company}`}
           </h1>
           <p className="text-xs text-muted-foreground">

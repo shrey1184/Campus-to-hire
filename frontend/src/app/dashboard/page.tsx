@@ -38,6 +38,7 @@ type StepCard = {
   description: string;
   href: string;
   cta: string;
+  statusLabel: string;
   icon: typeof Target;
   status: "ready" | "attention" | "locked";
 };
@@ -136,57 +137,71 @@ export default function DashboardPage() {
   const nextSteps: StepCard[] = roadmap
     ? [
         {
-          title: "Execute today",
+          title: t("dashboard.steps.executeTitle"),
           description:
             totalTasks > 0
-              ? `${completedTasks} of ${totalTasks} tasks done. Finish the current study block first.`
-              : "Your roadmap exists, but today's task list still needs to be generated.",
+              ? t("dashboard.steps.executeDescriptionReady", {
+                  completed: completedTasks,
+                  total: totalTasks,
+                })
+              : t("dashboard.steps.executeDescriptionEmpty"),
           href: "/dashboard/today",
-          cta: totalTasks > 0 ? "Open today's tasks" : "Check today's plan",
+          cta: totalTasks > 0
+            ? t("dashboard.steps.executeCtaReady")
+            : t("dashboard.steps.executeCtaEmpty"),
           icon: CalendarCheck,
+          statusLabel:
+            totalTasks > 0 ? t("common.status.ready") : t("common.status.attention"),
           status: totalTasks > 0 ? "ready" : "attention",
         },
         {
-          title: "Review roadmap",
-          description: `Week ${roadmap.current_week} is active. ${remainingWeeks} week${remainingWeeks === 1 ? "" : "s"} remain in the current plan.`,
+          title: t("dashboard.steps.reviewTitle"),
+          description: t("dashboard.steps.reviewDescription", {
+            week: roadmap.current_week,
+            remainingWeeks,
+          }),
           href: "/dashboard/roadmap",
-          cta: "See full roadmap",
+          cta: t("dashboard.steps.reviewCta"),
           icon: Map,
+          statusLabel: t("common.status.ready"),
           status: "ready",
         },
         {
-          title: "Pressure-test with a JD",
-          description: "Compare your current profile to a real role before the next mock interview.",
+          title: t("dashboard.steps.jdTitle"),
+          description: t("dashboard.steps.jdDescription"),
           href: "/dashboard/jd-analyze",
-          cta: "Analyze a job description",
+          cta: t("dashboard.steps.jdCta"),
           icon: FileSearch,
+          statusLabel: t("common.status.ready"),
           status: "ready",
         },
       ]
     : [
         {
-          title: "Generate roadmap",
-          description:
-            "Start with a full preparation plan based on your role, time, and current skill level.",
+          title: t("dashboard.steps.generateTitle"),
+          description: t("dashboard.steps.generateDescription"),
           href: "/dashboard/roadmap",
-          cta: "Create roadmap",
+          cta: t("dashboard.steps.generateCta"),
           icon: Map,
+          statusLabel: t("common.status.attention"),
           status: "attention",
         },
         {
-          title: "Define today's work",
-          description: "Daily tasks unlock automatically after the roadmap is created.",
+          title: t("dashboard.steps.defineTitle"),
+          description: t("dashboard.steps.defineDescription"),
           href: "/dashboard/today",
-          cta: "Preview tasks page",
+          cta: t("dashboard.steps.defineCta"),
           icon: CalendarCheck,
+          statusLabel: t("common.status.locked"),
           status: "locked",
         },
         {
-          title: "Validate against a JD",
-          description: "Use the job description analyzer to see what employers expect right now.",
+          title: t("dashboard.steps.validateTitle"),
+          description: t("dashboard.steps.validateDescription"),
           href: "/dashboard/jd-analyze",
-          cta: "Open JD analyzer",
+          cta: t("dashboard.steps.validateCta"),
           icon: FileSearch,
+          statusLabel: t("common.status.ready"),
           status: "ready",
         },
       ];
@@ -269,7 +284,10 @@ export default function DashboardPage() {
                   suffix="%"
                   helper={
                     roadmap
-                      ? `Week ${roadmap.current_week} of ${roadmapWeeks}`
+                      ? t("dashboard.stats.weekProgress", {
+                          week: roadmap.current_week,
+                          total: roadmapWeeks,
+                        })
                       : t("dashboard.stats.noRoadmap")
                   }
                   icon={Target}
@@ -407,7 +425,7 @@ export default function DashboardPage() {
                       </p>
                       <p className="mt-1 text-sm text-[var(--text-secondary)]">
                         {todayPlan.focus_area ||
-                          "Focus on consistent execution and interview-oriented practice."}
+                          t("dashboard.today.focusFallback")}
                       </p>
                     </div>
                     <div className="rounded-full border border-[var(--accent)]/20 bg-[var(--accent-subtle)] px-3 py-1 text-sm font-semibold text-[var(--accent)]">
@@ -521,6 +539,12 @@ export default function DashboardPage() {
                 activeDaysLabel={t("dashboard.consistency.activeDays", { days: activeDays })}
                 lessLabel={t("dashboard.consistency.less")}
                 moreLabel={t("dashboard.consistency.more")}
+                getTooltip={(entry) =>
+                  t("dashboard.consistency.tooltip", {
+                    date: entry.dateLabel,
+                    count: entry.count,
+                  })
+                }
               />
             </div>
           </div>
@@ -611,7 +635,7 @@ function StepActionCard({ index, step }: { index: number; step: StepCard }) {
               </p>
             </div>
             <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-              {step.status}
+              {step.statusLabel}
             </span>
           </div>
 
@@ -697,6 +721,7 @@ function ActivityHeatmap({
   activeDaysLabel,
   lessLabel,
   moreLabel,
+  getTooltip,
 }: {
   data: Array<{ date: string; count: number; level: number; dateLabel: string }>;
   activeDays: number;
@@ -704,6 +729,7 @@ function ActivityHeatmap({
   activeDaysLabel: string;
   lessLabel: string;
   moreLabel: string;
+  getTooltip: (entry: { date: string; count: number; level: number; dateLabel: string }) => string;
 }) {
   const levelClass = [
     "bg-white/5",
@@ -725,7 +751,7 @@ function ActivityHeatmap({
           {data.map((entry) => (
             <div
               key={entry.date}
-              title={`${entry.dateLabel}: ${entry.count} tasks`}
+              title={getTooltip(entry)}
               className={`h-3.5 w-3.5 rounded-[4px] ${levelClass[entry.level] ?? levelClass[0]}`}
             />
           ))}

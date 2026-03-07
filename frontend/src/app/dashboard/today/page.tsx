@@ -115,6 +115,7 @@ export default function TodayPage() {
   }, [plan]);
 
   const allDone = summary.total > 0 && summary.completed === summary.total;
+  const plannedHours = Math.round((summary.totalMinutes / 60) * 10) / 10;
 
   useEffect(() => {
     if (allDone && !confettiFiredRef.current) {
@@ -178,7 +179,7 @@ export default function TodayPage() {
                 <Kpi label={t("today.kpi.completion")} value={`${summary.completionPct}%`} />
                 <Kpi
                   label={t("today.kpi.timeBudget")}
-                  value={`${Math.round((summary.totalMinutes / 60) * 10) / 10}h`}
+                  value={`${plannedHours}${t("common.hourShort")}`}
                 />
               </div>
             </div>
@@ -189,11 +190,10 @@ export default function TodayPage() {
               </p>
               <div className="mt-4 rounded-[22px] border border-white/8 bg-white/[0.03] p-4">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">
-                  Week {plan.week}, Day {plan.day}
+                  {t("dashboard.today.weekDay", { week: plan.week, day: plan.day })}
                 </p>
                 <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                  {plan.focus_area ||
-                    "Steady repetition, deliberate practice, and one interview-oriented task."}
+                  {plan.focus_area || t("today.focusFallback")}
                 </p>
               </div>
 
@@ -215,7 +215,7 @@ export default function TodayPage() {
               <div className="mt-5 space-y-3">
                 <InlineMetric
                   label={t("today.minutesCompleted")}
-                  value={`${summary.completedMinutes}m`}
+                  value={`${summary.completedMinutes}${t("common.minShort")}`}
                   icon={Clock3}
                 />
                 <InlineMetric
@@ -233,33 +233,30 @@ export default function TodayPage() {
         <BlurFade delay={0.1}>
           <div className="card-dark rounded-[24px] p-5 sm:p-6">
             <div className="mb-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                Step 1
-              </p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                {t("common.step", { step: 1 })}
+                </p>
               <h2 className="heading-md mt-1">{t("today.orient")}</h2>
             </div>
 
             <div className="space-y-3">
               <StepCard
                 number="01"
-                title="Know the goal"
-                description={
-                  plan.focus_area ||
-                  "Treat today as a blended day: learning, practice, and review should all connect to the same role outcome."
-                }
+                title={t("today.step.goalTitle")}
+                description={plan.focus_area || t("today.step.goalDescription")}
               />
               <StepCard
                 number="02"
-                title="Protect the time block"
-                description={`${Math.round((summary.totalMinutes / 60) * 10) / 10} hours are planned today. Finish the first incomplete task before switching context.`}
+                title={t("today.step.timeTitle")}
+                description={t("today.step.timeDescription", { hours: plannedHours })}
               />
               <StepCard
                 number="03"
-                title="Close the loop"
+                title={t("today.step.loopTitle")}
                 description={
                   allDone
-                    ? "All tasks are complete. You can move to the next day when ready."
-                    : "Mark work as complete immediately after each block so the board stays reliable."
+                    ? t("today.step.loopDoneDescription")
+                    : t("today.step.loopOpenDescription")
                 }
               />
             </div>
@@ -282,7 +279,7 @@ export default function TodayPage() {
                           {t("today.dayComplete")}
                         </p>
                         <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                          Move forward only when you are ready for the next day&apos;s workload.
+                          {t("today.dayCompleteDescription")}
                         </p>
                       </div>
                     </div>
@@ -310,7 +307,7 @@ export default function TodayPage() {
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                  Step 2
+                  {t("common.step", { step: 2 })}
                 </p>
                 <h2 className="heading-md mt-1">{t("today.execute")}</h2>
               </div>
@@ -325,6 +322,9 @@ export default function TodayPage() {
                   task={task}
                   toggling={toggling === task.id}
                   onToggle={() => handleToggle(task)}
+                  minutesLabel={t("common.minShort")}
+                  markCompleteLabel={t("today.task.markComplete")}
+                  markIncompleteLabel={t("today.task.markIncomplete")}
                 />
               ))}
             </div>
@@ -399,11 +399,17 @@ function TaskRow({
   task,
   toggling,
   onToggle,
+  minutesLabel,
+  markCompleteLabel,
+  markIncompleteLabel,
 }: {
   index: number;
   task: Task;
   toggling: boolean;
   onToggle: () => void;
+  minutesLabel: string;
+  markCompleteLabel: string;
+  markIncompleteLabel: string;
 }) {
   const Icon = TYPE_ICONS[task.type] || BookOpen;
 
@@ -423,7 +429,7 @@ function TaskRow({
           onClick={onToggle}
           disabled={toggling}
           className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/8 bg-black/25 text-[var(--accent)]"
-          aria-label={task.completed ? "Mark task as incomplete" : "Mark task as complete"}
+          aria-label={task.completed ? markIncompleteLabel : markCompleteLabel}
         >
           {toggling ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -462,7 +468,7 @@ function TaskRow({
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {task.duration_minutes ? (
               <span className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-[var(--text-secondary)]">
-                {task.duration_minutes} min
+                {task.duration_minutes} {minutesLabel}
               </span>
             ) : null}
             {task.resources?.map((resource, resourceIndex) => (
