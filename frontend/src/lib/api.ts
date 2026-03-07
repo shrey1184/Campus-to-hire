@@ -14,6 +14,7 @@ import type {
   Interview,
   JDAnalysis,
   TranslateResponse,
+  TranslateRoadmapResponse,
 } from "@/types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -213,6 +214,14 @@ export const translateApi = {
     request<TranslateResponse>("/api/translate", {
       method: "POST",
       body: JSON.stringify({ text, target_language: targetLanguage }),
+    }),
+};
+
+export const contentApi = {
+  translateRoadmap: (roadmapId: string, targetLanguage: string) =>
+    request<TranslateRoadmapResponse>("/api/content/translate-roadmap", {
+      method: "POST",
+      body: JSON.stringify({ roadmap_id: roadmapId, target_language: targetLanguage }),
     }),
 };
 

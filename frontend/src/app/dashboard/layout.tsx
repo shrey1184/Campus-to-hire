@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useLanguage } from "@/lib/language-context";
 import { useEffect, type ReactNode } from "react";
 import { motion } from "framer-motion";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   LayoutDashboard,
   Map,
@@ -17,17 +19,43 @@ import {
 import Logo from "@/components/Logo";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/roadmap", label: "Roadmap", icon: Map },
-  { href: "/dashboard/today", label: "Today's Plan", icon: CalendarCheck },
-  { href: "/dashboard/interview", label: "Mock Interview", icon: MessageSquare },
-  { href: "/dashboard/jd-analyze", label: "JD Analysis", icon: FileSearch },
+  {
+    href: "/dashboard",
+    labelKey: "nav.dashboard",
+    mobileLabelKey: "nav.dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    href: "/dashboard/roadmap",
+    labelKey: "nav.roadmap",
+    mobileLabelKey: "nav.roadmap",
+    icon: Map,
+  },
+  {
+    href: "/dashboard/today",
+    labelKey: "nav.today",
+    mobileLabelKey: "nav.mobileToday",
+    icon: CalendarCheck,
+  },
+  {
+    href: "/dashboard/interview",
+    labelKey: "nav.interview",
+    mobileLabelKey: "nav.mobileInterview",
+    icon: MessageSquare,
+  },
+  {
+    href: "/dashboard/jd-analyze",
+    labelKey: "nav.jd",
+    mobileLabelKey: "nav.mobileJd",
+    icon: FileSearch,
+  },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading, logout } = useAuth();
+  const { t } = useLanguage();
   const shouldRedirectToOnboarding = Boolean(
     user && !user.onboarding_completed && pathname !== "/onboarding"
   );
@@ -50,7 +78,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <div className="rounded-xl px-8 py-6 text-center card-glass pulse-card">
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary spinner-glow" />
           <p className="mt-3 text-micro text-muted-foreground">
-            {loading ? "Initializing workspace..." : "Redirecting to onboarding..."}
+            {loading ? t("common.loadingWorkspace") : t("common.redirectingOnboarding")}
           </p>
         </div>
       </div>
@@ -105,7 +133,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     )}
                     <span className="relative z-10 flex items-center gap-3">
                       <item.icon className="h-4 w-4" />
-                      {item.label}
+                      {t(item.labelKey)}
                     </span>
                   </Link>
                 </motion.div>
@@ -115,6 +143,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
           {/* User */}
           <div className="border-t border-[var(--border-default)] p-4">
+            <div className="mb-4">
+              <LanguageSwitcher />
+            </div>
             <div className="mb-3 flex items-center gap-3">
               <motion.div
                 className="relative group cursor-pointer"
@@ -136,7 +167,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--text-secondary)] btn-outline hover:text-[var(--text-primary)] transition-colors"
             >
               <LogOut className="h-4 w-4" />
-              Sign out
+              {t("common.signOut")}
             </button>
           </div>
         </div>
@@ -148,6 +179,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <Logo size="sm" />
         </Link>
         <div className="flex items-center gap-2">
+          <LanguageSwitcher compact />
           <motion.div
             className="relative group cursor-pointer"
             whileHover={{ scale: 1.05 }}
@@ -181,7 +213,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               )}
               <span className={`relative z-10 ${isActive ? "text-[var(--accent)]" : "text-[var(--text-muted)]"}`}>
                 <item.icon className="h-4 w-4 mx-auto mb-0.5" />
-                <span className="truncate">{item.label.split(" ")[0]}</span>
+                <span className="truncate">{t(item.mobileLabelKey)}</span>
               </span>
             </Link>
           );
@@ -190,7 +222,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
       {/* Main content */}
       <main className="flex-1 pt-14 pb-16 lg:ml-64 lg:pt-0 lg:pb-0">
-        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
+        <div className="w-full px-4 py-5 sm:px-6 sm:py-7 lg:px-6 lg:py-8 xl:px-8">
           {children}
         </div>
       </main>

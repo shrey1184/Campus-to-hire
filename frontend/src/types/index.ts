@@ -99,6 +99,10 @@ export interface ResourceRef {
   title: string;
   type: string;
   url?: string;
+  difficulty?: string;
+  platform?: string;
+  youtube_url?: string | null;
+  resource_type?: string;
 }
 
 // ── Daily Plan ──────────────────────────────────────────────────────────────
@@ -167,6 +171,12 @@ export interface GapItem {
 export interface TranslateResponse {
   translated_text: string;
   source_language: string;
+  target_language: string;
+}
+
+export interface TranslateRoadmapResponse {
+  roadmap_id: string;
+  translated_content: RoadmapContent;
   target_language: string;
 }
 

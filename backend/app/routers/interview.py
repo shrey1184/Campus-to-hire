@@ -17,6 +17,29 @@ from app.services.prompts import (
 
 router = APIRouter(prefix="/api/interview", tags=["interview"])
 
+LANGUAGE_NAMES = {
+    "en": "English",
+    "hi": "Hindi",
+    "ta": "Tamil",
+    "te": "Telugu",
+    "bn": "Bengali",
+    "mr": "Marathi",
+}
+
+
+def _build_interview_system_prompt(preferred_language: str | None) -> str:
+    language_code = (preferred_language or "en").lower()
+    if language_code == "en":
+        return INTERVIEW_SYSTEM_PROMPT
+
+    language_name = LANGUAGE_NAMES.get(language_code, preferred_language or "English")
+    return (
+        f"{INTERVIEW_SYSTEM_PROMPT}\n\n"
+        f"Conduct this interview primarily in {language_name}. "
+        f"Keep technical terms (data structures, algorithms, API names) in English "
+        f"but explain and converse in {language_name}."
+    )
+
 
 def _evaluate_interview(interview: Interview) -> tuple[int | None, str | None]:
     """
@@ -26,7 +49,7 @@ def _evaluate_interview(interview: Interview) -> tuple[int | None, str | None]:
     On any parsing failure the raw text is returned as feedback with no score.
     """
     raw = bedrock_service.invoke_model(
-        INTERVIEW_SYSTEM_PROMPT,
+        _build_interview_system_prompt(getattr(interview, "preferred_language", "en")),
         get_interview_evaluate_prompt(
             interview.role,
             interview.company,
@@ -56,8 +79,9 @@ def start_interview(
     db: Session = Depends(get_db),
 ) -> InterviewResponse:
     """Start a new mock interview session and return the first question."""
+    system_prompt = _build_interview_system_prompt(current_user.preferred_language)
     first_question = bedrock_service.invoke_model(
-        INTERVIEW_SYSTEM_PROMPT,
+        system_prompt,
         get_interview_start_prompt(body.role, body.company),
         fallback_type="interview",
     )
@@ -68,6 +92,7 @@ def start_interview(
         company=body.company,
         messages=[{"role": "assistant", "content": first_question}],
     )
+    setattr(interview, "preferred_language", current_user.preferred_language)
     db.add(interview)
     db.commit()
     db.refresh(interview)
@@ -106,6 +131,7 @@ def respond_to_interview(
 
     # Auto-evaluate when 5 Q&A pairs (10 messages) have been exchanged.
     if len(messages) >= 10:
+        setattr(interview, "preferred_language", current_user.preferred_language)
         score, feedback = _evaluate_interview(interview)
         interview.score = score
         interview.feedback = feedback
@@ -120,8 +146,9 @@ def respond_to_interview(
     # - get_interview_followup_prompt embeds the recent context in the prompt,
     #   giving the model everything it needs without the ordering constraint.
     last_answer = body.message
+    system_prompt = _build_interview_system_prompt(current_user.preferred_language)
     ai_response = bedrock_service.invoke_model(
-        INTERVIEW_SYSTEM_PROMPT,
+        system_prompt,
         get_interview_followup_prompt(
             interview.role,
             interview.company,
@@ -157,6 +184,7 @@ def end_interview(
     if interview is None:
         raise HTTPException(status_code=404, detail="Interview not found")
 
+    setattr(interview, "preferred_language", current_user.preferred_language)
     score, feedback = _evaluate_interview(interview)
     interview.score = score
     interview.feedback = feedback

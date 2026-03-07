@@ -1,12 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { BlurFade } from "@/components/magic/BlurFade";
+import { TodaySkeleton } from "@/components/skeletons/TodaySkeleton";
 import { dailyPlanApi } from "@/lib/api";
+import { fireConfetti } from "@/lib/confetti";
+import { useLanguage } from "@/lib/language-context";
 import type { DailyPlan, Task } from "@/types";
 import { TASK_TYPE_COLORS } from "@/types";
 import {
+  AlertTriangle,
   ArrowRight,
   BookOpen,
   CalendarCheck,
@@ -34,15 +38,19 @@ const TYPE_ICONS: Record<string, typeof BookOpen> = {
 };
 
 export default function TodayPage() {
+  const { t } = useLanguage();
   const [plan, setPlan] = useState<DailyPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
   const [advancing, setAdvancing] = useState(false);
+  const [error, setError] = useState("");
+  const confettiFiredRef = useRef(false);
 
   const loadPlan = useCallback(async () => {
     try {
       const result = await dailyPlanApi.getToday();
       setPlan(result);
+      setError("");
     } catch {
       setPlan(null);
     } finally {
@@ -51,16 +59,19 @@ export default function TodayPage() {
   }, []);
 
   useEffect(() => {
-    loadPlan();
+    void loadPlan();
   }, [loadPlan]);
 
   async function handleToggle(task: Task) {
     if (!plan) return;
 
     setToggling(task.id);
+    setError("");
     try {
       const updated = await dailyPlanApi.completeTask(task.id, !task.completed);
       setPlan(updated);
+    } catch {
+      setError(t("today.error"));
     } finally {
       setToggling(null);
     }
@@ -68,9 +79,12 @@ export default function TodayPage() {
 
   async function handleNextDay() {
     setAdvancing(true);
+    setError("");
     try {
       const next = await dailyPlanApi.nextDay();
       setPlan(next);
+    } catch {
+      setError(t("today.error"));
     } finally {
       setAdvancing(false);
     }
@@ -100,15 +114,21 @@ export default function TodayPage() {
     return { completed, total, completionPct, totalMinutes, completedMinutes, nextTask };
   }, [plan]);
 
+  const allDone = summary.total > 0 && summary.completed === summary.total;
+
+  useEffect(() => {
+    if (allDone && !confettiFiredRef.current) {
+      fireConfetti();
+      confettiFiredRef.current = true;
+    }
+
+    if (!allDone) {
+      confettiFiredRef.current = false;
+    }
+  }, [allDone]);
+
   if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="card-glass pulse-card rounded-xl px-8 py-6 text-center">
-          <Loader2 className="spinner-glow mx-auto h-8 w-8 animate-spin text-primary" />
-          <p className="text-micro mt-3 text-muted-foreground">Preparing today&apos;s tasks...</p>
-        </div>
-      </div>
-    );
+    return <TodaySkeleton />;
   }
 
   if (!plan) {
@@ -117,15 +137,13 @@ export default function TodayPage() {
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent-subtle)] text-[var(--accent)]">
           <CalendarCheck className="h-6 w-6" />
         </div>
-        <h1 className="heading-lg">No tasks for today</h1>
+        <h1 className="heading-lg">{t("today.noTasks")}</h1>
         <p className="body-text mt-2 text-[var(--text-secondary)]">
-          Generate a roadmap first, then this page becomes your daily execution board.
+          {t("today.noTasksDescription")}
         </p>
       </div>
     );
   }
-
-  const allDone = summary.total > 0 && summary.completed === summary.total;
 
   return (
     <motion.div
@@ -134,43 +152,54 @@ export default function TodayPage() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.35 }}
     >
+      {error ? (
+        <div className="flex items-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          <AlertTriangle className="h-4 w-4" />
+          {error}
+        </div>
+      ) : null}
+
       <BlurFade delay={0.05}>
         <section className="rounded-[28px] border border-[var(--accent)]/20 bg-[radial-gradient(circle_at_top_left,rgba(201,168,76,0.16),transparent_28%),linear-gradient(135deg,#101010,#080808)] p-6 sm:p-8">
           <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="space-y-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/25 bg-[var(--accent-subtle)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">
                 <Target className="h-3.5 w-3.5" />
-                Today&apos;s execution plan
+                {t("today.hero.badge")}
               </div>
               <div>
-                <h1 className="heading-xl">Finish one focused day before worrying about the whole journey.</h1>
+                <h1 className="heading-xl">{t("today.hero.title")}</h1>
                 <p className="body-text mt-3 max-w-2xl text-[var(--text-secondary)]">
-                  Move in order: understand today’s focus, complete the highest-value task first, then close the day only when the board is green.
+                  {t("today.hero.description")}
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
-                <Kpi label="Tasks done" value={`${summary.completed}/${summary.total}`} />
-                <Kpi label="Completion" value={`${summary.completionPct}%`} />
-                <Kpi label="Time budget" value={`${Math.round((summary.totalMinutes / 60) * 10) / 10}h`} />
+                <Kpi label={t("today.kpi.tasksDone")} value={`${summary.completed}/${summary.total}`} />
+                <Kpi label={t("today.kpi.completion")} value={`${summary.completionPct}%`} />
+                <Kpi
+                  label={t("today.kpi.timeBudget")}
+                  value={`${Math.round((summary.totalMinutes / 60) * 10) / 10}h`}
+                />
               </div>
             </div>
 
             <div className="card-glass rounded-[24px] border-white/10 p-5 sm:p-6">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                Day snapshot
+                {t("today.snapshot")}
               </p>
               <div className="mt-4 rounded-[22px] border border-white/8 bg-white/[0.03] p-4">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">
                   Week {plan.week}, Day {plan.day}
                 </p>
                 <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                  {plan.focus_area || "Steady repetition, deliberate practice, and one interview-oriented task."}
+                  {plan.focus_area ||
+                    "Steady repetition, deliberate practice, and one interview-oriented task."}
                 </p>
               </div>
 
               <div className="mt-5">
                 <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-[var(--text-secondary)]">Progress</span>
+                  <span className="text-[var(--text-secondary)]">{t("today.progress")}</span>
                   <span className="font-semibold text-[var(--text-primary)]">{summary.completionPct}%</span>
                 </div>
                 <div className="h-3 overflow-hidden rounded-full bg-white/5">
@@ -184,10 +213,14 @@ export default function TodayPage() {
               </div>
 
               <div className="mt-5 space-y-3">
-                <InlineMetric label="Minutes completed" value={`${summary.completedMinutes}m`} icon={Clock3} />
                 <InlineMetric
-                  label="Next priority"
-                  value={summary.nextTask?.title || "Everything is complete"}
+                  label={t("today.minutesCompleted")}
+                  value={`${summary.completedMinutes}m`}
+                  icon={Clock3}
+                />
+                <InlineMetric
+                  label={t("today.nextPriority")}
+                  value={summary.nextTask?.title || t("today.everythingComplete")}
                   icon={ArrowRight}
                 />
               </div>
@@ -203,14 +236,17 @@ export default function TodayPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
                 Step 1
               </p>
-              <h2 className="heading-md mt-1">Orient yourself</h2>
+              <h2 className="heading-md mt-1">{t("today.orient")}</h2>
             </div>
 
             <div className="space-y-3">
               <StepCard
                 number="01"
                 title="Know the goal"
-                description={plan.focus_area || "Treat today as a blended day: learning, practice, and review should all connect to the same role outcome."}
+                description={
+                  plan.focus_area ||
+                  "Treat today as a blended day: learning, practice, and review should all connect to the same role outcome."
+                }
               />
               <StepCard
                 number="02"
@@ -220,7 +256,11 @@ export default function TodayPage() {
               <StepCard
                 number="03"
                 title="Close the loop"
-                description={allDone ? "All tasks are complete. You can move to the next day when ready." : "Mark work as complete immediately after each block so the board stays reliable."}
+                description={
+                  allDone
+                    ? "All tasks are complete. You can move to the next day when ready."
+                    : "Mark work as complete immediately after each block so the board stays reliable."
+                }
               />
             </div>
 
@@ -238,7 +278,9 @@ export default function TodayPage() {
                         <Trophy className="h-5 w-5" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-[var(--text-primary)]">Day complete</p>
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">
+                          {t("today.dayComplete")}
+                        </p>
                         <p className="mt-1 text-sm text-[var(--text-secondary)]">
                           Move forward only when you are ready for the next day&apos;s workload.
                         </p>
@@ -249,8 +291,12 @@ export default function TodayPage() {
                       disabled={advancing}
                       className="btn-accent inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm"
                     >
-                      {advancing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-                      Next day
+                      {advancing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ArrowRight className="h-4 w-4" />
+                      )}
+                      {t("today.nextDay")}
                     </button>
                   </div>
                 </motion.div>
@@ -266,7 +312,7 @@ export default function TodayPage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
                   Step 2
                 </p>
-                <h2 className="heading-md mt-1">Execute the board</h2>
+                <h2 className="heading-md mt-1">{t("today.execute")}</h2>
               </div>
               <CalendarCheck className="h-5 w-5 text-[var(--accent)]" />
             </div>
@@ -292,7 +338,9 @@ export default function TodayPage() {
 function Kpi({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+        {label}
+      </p>
       <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{value}</p>
     </div>
   );
@@ -315,7 +363,9 @@ function InlineMetric({
         </div>
         <span className="text-sm text-[var(--text-secondary)]">{label}</span>
       </div>
-      <span className="max-w-[12rem] truncate text-sm font-semibold text-[var(--text-primary)]">{value}</span>
+      <span className="max-w-[12rem] truncate text-sm font-semibold text-[var(--text-primary)]">
+        {value}
+      </span>
     </div>
   );
 }
@@ -389,10 +439,18 @@ function TaskRow({
             <div className="rounded-xl bg-white/5 p-2 text-[var(--accent)]">
               <Icon className="h-4 w-4" />
             </div>
-            <p className={`text-sm font-semibold ${task.completed ? "line-through text-[var(--text-secondary)]" : "text-[var(--text-primary)]"}`}>
+            <p
+              className={`text-sm font-semibold ${
+                task.completed ? "line-through text-[var(--text-secondary)]" : "text-[var(--text-primary)]"
+              }`}
+            >
               {task.title}
             </p>
-            <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${TASK_TYPE_COLORS[task.type] || "bg-secondary text-secondary-foreground"}`}>
+            <span
+              className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${
+                TASK_TYPE_COLORS[task.type] || "bg-secondary text-secondary-foreground"
+              }`}
+            >
               {task.type}
             </span>
           </div>

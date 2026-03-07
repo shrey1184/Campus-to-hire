@@ -5,7 +5,9 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { BlurFade } from "@/components/magic/BlurFade";
 import { NumberTicker } from "@/components/magic/NumberTicker";
+import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useAuth } from "@/lib/auth-context";
+import { useLanguage } from "@/lib/language-context";
 import { dashboardApi, dailyPlanApi, profileApi, roadmapApi } from "@/lib/api";
 import type {
   CompleteDashboardStats,
@@ -24,7 +26,6 @@ import {
   Clock3,
   FileSearch,
   Flame,
-  Loader2,
   Map,
   MessageSquare,
   Sparkles,
@@ -43,12 +44,14 @@ type StepCard = {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [progress, setProgress] = useState<UserProgressStats | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [completeStats, setCompleteStats] = useState<CompleteDashboardStats | null>(null);
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
   const [todayPlan, setTodayPlan] = useState<DailyPlan | null>(null);
   const [loading, setLoading] = useState(true);
+  const [warning, setWarning] = useState("");
 
   useEffect(() => {
     async function loadDashboard() {
@@ -64,6 +67,11 @@ export default function DashboardPage() {
         setStats(statsData);
         setCompleteStats(completeStatsData);
         setRoadmap(roadmapData);
+        setWarning(
+          !progressData && !statsData && !completeStatsData && !roadmapData
+            ? t("dashboard.warning.partial")
+            : "",
+        );
 
         if (roadmapData) {
           const planData = await dailyPlanApi.getToday().catch(() => null);
@@ -74,8 +82,8 @@ export default function DashboardPage() {
       }
     }
 
-    loadDashboard();
-  }, []);
+    void loadDashboard();
+  }, [t]);
 
   const targetRole = user?.target_role?.replace(/_/g, " ") || "software engineer";
   const firstName = user?.name?.split(" ")[0] || "Student";
@@ -95,10 +103,10 @@ export default function DashboardPage() {
   }, [completeStats, progress]);
 
   const weeklyStats = completeStats?.weekly_stats ?? {
-    problems_solved: Math.max(progress?.completed_tasks ?? 0, completedTasks),
-    study_hours: Number(((todayPlan?.tasks.reduce((sum, task) => sum + (task.duration_minutes ?? 0), 0) ?? 0) / 60).toFixed(1)),
-    xp_gained: completeStats?.xp_gained_today ?? xpStats.totalXP,
-    tasks_completed: completedTasks,
+    problems_solved: 0,
+    study_hours: 0,
+    xp_gained: 0,
+    tasks_completed: 0,
   };
 
   const performanceLabels =
@@ -108,7 +116,7 @@ export default function DashboardPage() {
   const performanceValues =
     completeStats?.performance_trend.values ??
     stats?.weekly_progress.tasks_completed ??
-    [2, 3, 4, 3, 5, 4, 6];
+    [0, 0, 0, 0, 0, 0, 0];
   const performanceChange =
     completeStats?.performance_trend.change_percentage ??
     calculateTrendChange(performanceValues);
@@ -117,11 +125,13 @@ export default function DashboardPage() {
     completeStats?.activity_heatmap?.map((entry) => ({
       ...entry,
       dateLabel: new Date(entry.date).toLocaleDateString(),
-    })) ?? buildFallbackActivity(progress?.completed_tasks ?? 0, stats?.streak_days ?? 0);
+    })) ?? buildFallbackActivity();
 
   const activeDays = activityData.filter((entry) => entry.count > 0).length;
   const roadmapWeeks = roadmap?.content.weeks.length ?? roadmap?.total_weeks ?? 0;
-  const remainingWeeks = roadmap ? Math.max(roadmap.total_weeks - roadmap.current_week + 1, 0) : 0;
+  const remainingWeeks = roadmap
+    ? Math.max(roadmap.total_weeks - roadmap.current_week + 1, 0)
+    : 0;
 
   const nextSteps: StepCard[] = roadmap
     ? [
@@ -130,9 +140,9 @@ export default function DashboardPage() {
           description:
             totalTasks > 0
               ? `${completedTasks} of ${totalTasks} tasks done. Finish the current study block first.`
-              : "Your roadmap exists, but today’s task list still needs to be generated.",
+              : "Your roadmap exists, but today's task list still needs to be generated.",
           href: "/dashboard/today",
-          cta: totalTasks > 0 ? "Open today’s tasks" : "Check today’s plan",
+          cta: totalTasks > 0 ? "Open today's tasks" : "Check today's plan",
           icon: CalendarCheck,
           status: totalTasks > 0 ? "ready" : "attention",
         },
@@ -156,14 +166,15 @@ export default function DashboardPage() {
     : [
         {
           title: "Generate roadmap",
-          description: "Start with a full preparation plan based on your role, time, and current skill level.",
+          description:
+            "Start with a full preparation plan based on your role, time, and current skill level.",
           href: "/dashboard/roadmap",
           cta: "Create roadmap",
           icon: Map,
           status: "attention",
         },
         {
-          title: "Define today’s work",
+          title: "Define today's work",
           description: "Daily tasks unlock automatically after the roadmap is created.",
           href: "/dashboard/today",
           cta: "Preview tasks page",
@@ -181,14 +192,7 @@ export default function DashboardPage() {
       ];
 
   if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="card-glass pulse-card rounded-xl px-8 py-6 text-center">
-          <Loader2 className="spinner-glow mx-auto h-8 w-8 animate-spin text-primary" />
-          <p className="text-micro mt-3 text-muted-foreground">Syncing your dashboard...</p>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
@@ -198,6 +202,12 @@ export default function DashboardPage() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.35 }}
     >
+      {warning ? (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          {warning}
+        </div>
+      ) : null}
+
       <BlurFade delay={0.05}>
         <section className="relative overflow-hidden rounded-[28px] border border-[var(--accent)]/20 bg-[radial-gradient(circle_at_top_left,rgba(201,168,76,0.16),transparent_30%),linear-gradient(135deg,#101010,#080808)] p-6 sm:p-8">
           <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[linear-gradient(180deg,rgba(201,168,76,0.08),transparent)] lg:block" />
@@ -205,47 +215,63 @@ export default function DashboardPage() {
             <div className="space-y-5">
               <div className="inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/25 bg-[var(--accent-subtle)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">
                 <Sparkles className="h-3.5 w-3.5" />
-                Placement mission control
+                {t("dashboard.hero.badge")}
               </div>
 
               <div className="space-y-3">
                 <h1 className="heading-xl max-w-3xl">
-                  {firstName}, your path to <span className="text-gradient">{targetRole}</span> is already mapped.
+                  {t("dashboard.hero.title", { name: firstName, role: targetRole })}
                 </h1>
                 <p className="body-text max-w-2xl text-[var(--text-secondary)]">
-                  Work the plan in sequence: lock the roadmap, finish today’s tasks, then test yourself against real interview and JD expectations.
+                  {t("dashboard.hero.description")}
                 </p>
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <Link href={roadmap ? "/dashboard/today" : "/dashboard/roadmap"} className="btn-accent inline-flex items-center gap-2 px-5 py-3 text-sm">
-                  {roadmap ? "Continue today’s plan" : "Generate your roadmap"}
+                <Link
+                  href={roadmap ? "/dashboard/today" : "/dashboard/roadmap"}
+                  className="btn-accent inline-flex items-center gap-2 px-5 py-3 text-sm"
+                >
+                  {roadmap ? t("dashboard.hero.continue") : t("dashboard.hero.generate")}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
-                <Link href="/dashboard/jd-analyze" className="btn-outline inline-flex items-center gap-2 px-5 py-3 text-sm">
+                <Link
+                  href="/dashboard/jd-analyze"
+                  className="btn-outline inline-flex items-center gap-2 px-5 py-3 text-sm"
+                >
                   <FileSearch className="h-4 w-4" />
-                  Analyze a JD
+                  {t("dashboard.hero.analyzeJd")}
                 </Link>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
                 <StatPanel
-                  label="Current level"
+                  label={t("dashboard.stats.currentLevel")}
                   value={xpStats.currentLevel}
-                  helper={`${xpStats.xpForNextLevel - xpStats.xpInCurrentLevel} XP to next level`}
+                  helper={t("dashboard.stats.xpToNext", {
+                    xp: xpStats.xpForNextLevel - xpStats.xpInCurrentLevel,
+                  })}
                   icon={Award}
                 />
                 <StatPanel
-                  label="Streak"
+                  label={t("dashboard.stats.streak")}
                   value={completeStats?.streak_days ?? stats?.streak_days ?? 0}
-                  helper={`${completeStats?.personal_best_streak ?? Math.max(stats?.streak_days ?? 0, 0)} day best`}
+                  helper={t("dashboard.stats.dayBest", {
+                    days:
+                      completeStats?.personal_best_streak ??
+                      Math.max(stats?.streak_days ?? 0, 0),
+                  })}
                   icon={Flame}
                 />
                 <StatPanel
-                  label="Readiness"
+                  label={t("dashboard.stats.readiness")}
                   value={progress?.completion_rate ?? 0}
                   suffix="%"
-                  helper={roadmap ? `Week ${roadmap.current_week} of ${roadmapWeeks}` : "No roadmap generated yet"}
+                  helper={
+                    roadmap
+                      ? `Week ${roadmap.current_week} of ${roadmapWeeks}`
+                      : t("dashboard.stats.noRoadmap")
+                  }
                   icon={Target}
                 />
               </div>
@@ -255,14 +281,14 @@ export default function DashboardPage() {
               <div className="mb-5 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                    XP progress
+                    {t("dashboard.xp.title")}
                   </p>
                   <p className="mt-1 text-3xl font-semibold text-[var(--text-primary)]">
                     <NumberTicker value={xpStats.totalXP} />
                   </p>
                 </div>
                 <div className="rounded-full border border-[var(--accent)]/25 bg-[var(--accent-subtle)] px-3 py-1 text-sm font-semibold text-[var(--accent)]">
-                  Level {xpStats.currentLevel}
+                  {t("dashboard.xp.level", { level: xpStats.currentLevel })}
                 </div>
               </div>
 
@@ -270,25 +296,34 @@ export default function DashboardPage() {
                 <motion.div
                   className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[#f2d78a]"
                   initial={{ width: 0 }}
-                  animate={{ width: `${Math.min((xpStats.xpInCurrentLevel / xpStats.xpForNextLevel) * 100, 100)}%` }}
+                  animate={{
+                    width: `${Math.min(
+                      (xpStats.xpInCurrentLevel / xpStats.xpForNextLevel) * 100,
+                      100,
+                    )}%`,
+                  }}
                   transition={{ duration: 0.45, ease: "easeOut" }}
                 />
               </div>
 
               <div className="grid gap-3">
                 <MiniMetric
-                  label="Today’s completion"
+                  label={t("dashboard.metrics.todayCompletion")}
                   value={`${completionPct}%`}
                   icon={CalendarCheck}
                 />
                 <MiniMetric
-                  label="Problems solved"
+                  label={t("dashboard.metrics.problemsSolved")}
                   value={String(completeStats?.problems_solved ?? progress?.completed_tasks ?? 0)}
                   icon={CheckCircle2}
                 />
                 <MiniMetric
-                  label="Interview average"
-                  value={`${completeStats?.average_interview_score ?? progress?.average_interview_score ?? 0}/100`}
+                  label={t("dashboard.metrics.interviewAverage")}
+                  value={`${
+                    completeStats?.average_interview_score ??
+                    progress?.average_interview_score ??
+                    0
+                  }/100`}
                   icon={MessageSquare}
                 />
               </div>
@@ -303,9 +338,9 @@ export default function DashboardPage() {
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                  Step by step
+                  {t("dashboard.steps.badge")}
                 </p>
-                <h2 className="heading-md mt-1">What to do next</h2>
+                <h2 className="heading-md mt-1">{t("dashboard.steps.title")}</h2>
               </div>
               <Brain className="h-5 w-5 text-[var(--accent)]" />
             </div>
@@ -323,18 +358,27 @@ export default function DashboardPage() {
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                  This week
+                  {t("dashboard.week.badge")}
                 </p>
-                <h2 className="heading-md mt-1">Execution summary</h2>
+                <h2 className="heading-md mt-1">{t("dashboard.week.title")}</h2>
               </div>
               <Clock3 className="h-5 w-5 text-[var(--accent)]" />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <SummaryCard label="Tasks completed" value={weeklyStats.tasks_completed} />
-              <SummaryCard label="Study hours" value={weeklyStats.study_hours} />
-              <SummaryCard label="XP gained" value={weeklyStats.xp_gained} />
-              <SummaryCard label="Problems solved" value={weeklyStats.problems_solved} />
+              <SummaryCard
+                label={t("dashboard.summary.tasksCompleted")}
+                value={weeklyStats.tasks_completed}
+              />
+              <SummaryCard
+                label={t("dashboard.summary.studyHours")}
+                value={weeklyStats.study_hours}
+              />
+              <SummaryCard label={t("dashboard.summary.xpGained")} value={weeklyStats.xp_gained} />
+              <SummaryCard
+                label={t("dashboard.metrics.problemsSolved")}
+                value={weeklyStats.problems_solved}
+              />
             </div>
           </div>
         </BlurFade>
@@ -346,9 +390,9 @@ export default function DashboardPage() {
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                  Today
+                  {t("dashboard.today.badge")}
                 </p>
-                <h2 className="heading-md mt-1">Current task lane</h2>
+                <h2 className="heading-md mt-1">{t("dashboard.today.title")}</h2>
               </div>
               <BookOpen className="h-5 w-5 text-[var(--accent)]" />
             </div>
@@ -359,14 +403,18 @@ export default function DashboardPage() {
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-[var(--text-primary)]">
-                        Week {todayPlan.week}, Day {todayPlan.day}
+                        {t("dashboard.today.weekDay", { week: todayPlan.week, day: todayPlan.day })}
                       </p>
                       <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                        {todayPlan.focus_area || "Focus on consistent execution and interview-oriented practice."}
+                        {todayPlan.focus_area ||
+                          "Focus on consistent execution and interview-oriented practice."}
                       </p>
                     </div>
                     <div className="rounded-full border border-[var(--accent)]/20 bg-[var(--accent-subtle)] px-3 py-1 text-sm font-semibold text-[var(--accent)]">
-                      {completedTasks}/{totalTasks} done
+                      {t("dashboard.today.done", {
+                        completed: completedTasks,
+                        total: totalTasks,
+                      })}
                     </div>
                   </div>
                 </div>
@@ -388,12 +436,20 @@ export default function DashboardPage() {
                           ) : (
                             <Target className="h-4 w-4 text-[var(--text-muted)]" />
                           )}
-                          <p className={`text-sm font-medium ${task.completed ? "text-[var(--text-secondary)] line-through" : "text-[var(--text-primary)]"}`}>
+                          <p
+                            className={`text-sm font-medium ${
+                              task.completed
+                                ? "text-[var(--text-secondary)] line-through"
+                                : "text-[var(--text-primary)]"
+                            }`}
+                          >
                             {task.title}
                           </p>
                         </div>
                         {task.description ? (
-                          <p className="mt-2 text-sm text-[var(--text-secondary)]">{task.description}</p>
+                          <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                            {task.description}
+                          </p>
                         ) : null}
                       </div>
                       {task.duration_minutes ? (
@@ -405,18 +461,21 @@ export default function DashboardPage() {
                   </div>
                 ))}
 
-                <Link href="/dashboard/today" className="link-glow inline-flex items-center gap-2 text-sm font-medium">
-                  Open the full task board
+                <Link
+                  href="/dashboard/today"
+                  className="link-glow inline-flex items-center gap-2 text-sm font-medium"
+                >
+                  {t("dashboard.today.openBoard")}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
             ) : (
               <EmptyState
                 icon={CalendarCheck}
-                title="No daily plan yet"
-                description="Generate or refresh your roadmap first, then today’s tasks will appear here."
+                title={t("dashboard.today.emptyTitle")}
+                description={t("dashboard.today.emptyDescription")}
                 href="/dashboard/roadmap"
-                cta="Go to roadmap"
+                cta={t("dashboard.today.emptyCta")}
               />
             )}
           </div>
@@ -428,9 +487,9 @@ export default function DashboardPage() {
               <div className="mb-5 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                    Performance
+                    {t("dashboard.performance.badge")}
                   </p>
-                  <h2 className="heading-md mt-1">7-day trend</h2>
+                  <h2 className="heading-md mt-1">{t("dashboard.performance.title")}</h2>
                 </div>
                 <TrendingUp className="h-5 w-5 text-[var(--accent)]" />
               </div>
@@ -439,6 +498,8 @@ export default function DashboardPage() {
                 labels={performanceLabels}
                 values={performanceValues}
                 changePercentage={performanceChange}
+                outputLabel={t("dashboard.performance.output")}
+                emptyLabel={t("dashboard.performance.empty")}
               />
             </div>
 
@@ -446,14 +507,21 @@ export default function DashboardPage() {
               <div className="mb-5 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                    Consistency
+                    {t("dashboard.consistency.badge")}
                   </p>
-                  <h2 className="heading-md mt-1">Activity heatmap</h2>
+                  <h2 className="heading-md mt-1">{t("dashboard.consistency.title")}</h2>
                 </div>
                 <Flame className="h-5 w-5 text-[var(--accent)]" />
               </div>
 
-              <ActivityHeatmap activeDays={activeDays} data={activityData} />
+              <ActivityHeatmap
+                activeDays={activeDays}
+                data={activityData}
+                emptyLabel={t("dashboard.performance.empty")}
+                activeDaysLabel={t("dashboard.consistency.activeDays", { days: activeDays })}
+                lessLabel={t("dashboard.consistency.less")}
+                moreLabel={t("dashboard.consistency.more")}
+              />
             </div>
           </div>
         </BlurFade>
@@ -478,7 +546,9 @@ function StatPanel({
   return (
     <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+          {label}
+        </p>
         <Icon className="h-4 w-4 text-[var(--accent)]" />
       </div>
       <p className="text-2xl font-semibold text-[var(--text-primary)]">
@@ -532,16 +602,23 @@ function StepActionCard({ index, step }: { index: number; step: StepCard }) {
             <div>
               <div className="flex items-center gap-2">
                 <Icon className="mt-0.5 h-4 w-4 text-[var(--accent)]" />
-                <h3 className="text-base font-semibold text-[var(--text-primary)]">{step.title}</h3>
+                <h3 className="text-base font-semibold text-[var(--text-primary)]">
+                  {step.title}
+                </h3>
               </div>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{step.description}</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                {step.description}
+              </p>
             </div>
             <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
               {step.status}
             </span>
           </div>
 
-          <Link href={step.href} className="link-glow mt-4 inline-flex items-center gap-2 text-sm font-medium">
+          <Link
+            href={step.href}
+            className="link-glow mt-4 inline-flex items-center gap-2 text-sm font-medium"
+          >
             {step.cta}
             <ArrowRight className="h-4 w-4" />
           </Link>
@@ -554,7 +631,9 @@ function StepActionCard({ index, step }: { index: number; step: StepCard }) {
 function SummaryCard({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+        {label}
+      </p>
       <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{value}</p>
     </div>
   );
@@ -564,16 +643,21 @@ function PerformanceChart({
   labels,
   values,
   changePercentage,
+  outputLabel,
+  emptyLabel,
 }: {
   labels: string[];
   values: number[];
   changePercentage: number;
+  outputLabel: string;
+  emptyLabel: string;
 }) {
   const maxValue = Math.max(...values, 1);
+  const isEmpty = values.every((value) => value === 0);
 
   return (
     <div className="space-y-4">
-      <div className="flex h-48 items-end gap-3">
+      <div className="relative flex h-48 items-end gap-3">
         {values.map((value, index) => (
           <div key={`${labels[index]}-${index}`} className="flex flex-1 flex-col items-center gap-2">
             <div className="flex h-full w-full items-end">
@@ -584,12 +668,19 @@ function PerformanceChart({
                 transition={{ duration: 0.35, delay: index * 0.04 }}
               />
             </div>
-            <span className="text-xs text-[var(--text-muted)]">{labels[index] || `D${index + 1}`}</span>
+            <span className="text-xs text-[var(--text-muted)]">
+              {labels[index] || `D${index + 1}`}
+            </span>
           </div>
         ))}
+        {isEmpty ? (
+          <div className="absolute inset-0 flex items-center justify-center rounded-2xl border border-dashed border-white/10 bg-black/35 px-4 text-center text-sm text-[var(--text-secondary)]">
+            {emptyLabel}
+          </div>
+        ) : null}
       </div>
       <div className="flex items-center justify-between text-sm">
-        <span className="text-[var(--text-secondary)]">Daily output score</span>
+        <span className="text-[var(--text-secondary)]">{outputLabel}</span>
         <span className={changePercentage >= 0 ? "text-[var(--accent)]" : "text-[var(--destructive)]"}>
           {changePercentage >= 0 ? "+" : ""}
           {changePercentage}%
@@ -602,19 +693,35 @@ function PerformanceChart({
 function ActivityHeatmap({
   data,
   activeDays,
+  emptyLabel,
+  activeDaysLabel,
+  lessLabel,
+  moreLabel,
 }: {
   data: Array<{ date: string; count: number; level: number; dateLabel: string }>;
   activeDays: number;
+  emptyLabel: string;
+  activeDaysLabel: string;
+  lessLabel: string;
+  moreLabel: string;
 }) {
-  const levelClass = ["bg-white/5", "bg-[var(--accent)]/25", "bg-[var(--accent)]/45", "bg-[var(--accent)]/70", "bg-[var(--accent)]"];
+  const levelClass = [
+    "bg-white/5",
+    "bg-[var(--accent)]/25",
+    "bg-[var(--accent)]/45",
+    "bg-[var(--accent)]/70",
+    "bg-[var(--accent)]",
+  ];
+  const isEmpty = activeDays === 0;
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-[var(--text-secondary)]">
-        {activeDays} active day{activeDays === 1 ? "" : "s"} in the last 12 weeks.
-      </p>
-      <div className="overflow-x-auto pb-1">
-        <div className="inline-grid grid-flow-col gap-1" style={{ gridTemplateRows: "repeat(7, minmax(0, 1fr))" }}>
+      <p className="text-sm text-[var(--text-secondary)]">{activeDaysLabel}</p>
+      <div className="relative overflow-x-auto pb-1">
+        <div
+          className="inline-grid grid-flow-col gap-1"
+          style={{ gridTemplateRows: "repeat(7, minmax(0, 1fr))" }}
+        >
           {data.map((entry) => (
             <div
               key={entry.date}
@@ -623,15 +730,20 @@ function ActivityHeatmap({
             />
           ))}
         </div>
+        {isEmpty ? (
+          <div className="absolute inset-0 flex items-center justify-center rounded-2xl border border-dashed border-white/10 bg-black/35 px-4 text-center text-sm text-[var(--text-secondary)]">
+            {emptyLabel}
+          </div>
+        ) : null}
       </div>
       <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
-        <span>Less</span>
+        <span>{lessLabel}</span>
         <div className="flex items-center gap-1">
           {levelClass.map((className) => (
             <div key={className} className={`h-3.5 w-3.5 rounded-[4px] ${className}`} />
           ))}
         </div>
-        <span>More</span>
+        <span>{moreLabel}</span>
       </div>
     </div>
   );
@@ -656,7 +768,9 @@ function EmptyState({
         <Icon className="h-6 w-6" />
       </div>
       <h3 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h3>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--text-secondary)]">{description}</p>
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--text-secondary)]">
+        {description}
+      </p>
       <Link href={href} className="btn-accent mt-5 inline-flex items-center gap-2 px-4 py-2.5 text-sm">
         {cta}
         <ArrowRight className="h-4 w-4" />
@@ -676,7 +790,7 @@ function calculateTrendChange(values: number[]) {
   return Math.round(((current - previous) / previous) * 100);
 }
 
-function buildFallbackActivity(totalTasks: number, streak: number) {
+function buildFallbackActivity() {
   const entries: Array<{ date: string; count: number; level: number; dateLabel: string }> = [];
   const today = new Date();
 
@@ -684,14 +798,11 @@ function buildFallbackActivity(totalTasks: number, streak: number) {
     const date = new Date(today);
     date.setDate(today.getDate() - offset);
 
-    const count = offset < streak ? 1 + ((totalTasks + offset) % 4) : (totalTasks + offset) % 5 === 0 ? 1 : 0;
-    const level = count === 0 ? 0 : count === 1 ? 1 : count === 2 ? 2 : count === 3 ? 3 : 4;
-
     entries.push({
       date: date.toISOString(),
       dateLabel: date.toLocaleDateString(),
-      count,
-      level,
+      count: 0,
+      level: 0,
     });
   }
 

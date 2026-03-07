@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { BlurFade } from "@/components/magic/BlurFade";
 import { ShimmerButton } from "@/components/magic/ShimmerButton";
-import { roadmapApi } from "@/lib/api";
-import type { Roadmap } from "@/types";
+import { RoadmapSkeleton } from "@/components/skeletons/RoadmapSkeleton";
+import { contentApi, roadmapApi } from "@/lib/api";
+import { useLanguage } from "@/lib/language-context";
+import type { Roadmap, RoadmapContent } from "@/types";
 import {
   BookOpen,
   CheckCircle2,
@@ -14,6 +16,7 @@ import {
   Code,
   FileText,
   Loader2,
+  Languages,
   Map,
   MessageSquare,
   Sparkles,
@@ -31,22 +34,34 @@ const TYPE_ICONS: Record<string, typeof BookOpen> = {
 };
 
 export default function RoadmapPage() {
+  const { language, t } = useLanguage();
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [generatingWeek, setGeneratingWeek] = useState<number | null>(null);
+  const [translatedContent, setTranslatedContent] = useState<Record<string, RoadmapContent>>({});
+  const [translatingRoadmap, setTranslatingRoadmap] = useState(false);
+  const [showTranslatedRoadmap, setShowTranslatedRoadmap] = useState(false);
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    loadRoadmap();
+    void loadRoadmap();
   }, []);
+
+  useEffect(() => {
+    if (language === "en") {
+      setShowTranslatedRoadmap(false);
+    }
+  }, [language]);
 
   async function loadRoadmap() {
     try {
       const result = await roadmapApi.getActive();
       setRoadmap(result);
+      setTranslatedContent({});
+      setShowTranslatedRoadmap(false);
       setExpandedWeek(Math.max(result.current_week - 1, 0));
     } catch {
       setRoadmap(null);
@@ -59,6 +74,8 @@ export default function RoadmapPage() {
     setGenerating(true);
     setGeneratingWeek(null);
     setError("");
+    setTranslatedContent({});
+    setShowTranslatedRoadmap(false);
 
     try {
       const initialRoadmap = await roadmapApi.generate();
@@ -81,15 +98,67 @@ export default function RoadmapPage() {
         }
       }
     } catch (generationError) {
-      setError(generationError instanceof Error ? generationError.message : "Failed to generate roadmap");
+      setError(
+        generationError instanceof Error
+          ? generationError.message
+          : "Failed to generate roadmap",
+      );
     } finally {
       setGenerating(false);
       setGeneratingWeek(null);
     }
   }
 
-  const roadmapSummary = useMemo(() => {
+  async function handleToggleTranslation() {
+    if (!roadmap || language === "en") {
+      return;
+    }
+
+    if (showTranslatedRoadmap) {
+      setShowTranslatedRoadmap(false);
+      return;
+    }
+
+    if (translatedContent[language]) {
+      setShowTranslatedRoadmap(true);
+      return;
+    }
+
+    setTranslatingRoadmap(true);
+    setError("");
+
+    try {
+      const response = await contentApi.translateRoadmap(roadmap.id, language);
+      setTranslatedContent((current) => ({
+        ...current,
+        [language]: response.translated_content,
+      }));
+      setShowTranslatedRoadmap(true);
+    } catch (translationError) {
+      setError(
+        translationError instanceof Error
+          ? translationError.message
+          : "Failed to translate roadmap",
+      );
+    } finally {
+      setTranslatingRoadmap(false);
+    }
+  }
+
+  const displayedContent = useMemo(() => {
     if (!roadmap) {
+      return null;
+    }
+
+    if (showTranslatedRoadmap && translatedContent[language]) {
+      return translatedContent[language];
+    }
+
+    return roadmap.content;
+  }, [language, roadmap, showTranslatedRoadmap, translatedContent]);
+
+  const roadmapSummary = useMemo(() => {
+    if (!roadmap || !displayedContent) {
       return {
         totalWeeks: 0,
         currentWeek: 0,
@@ -99,7 +168,9 @@ export default function RoadmapPage() {
       };
     }
 
-    const allTasks = roadmap.content.weeks.flatMap((week) => week.days?.flatMap((day) => day.tasks || []) || []);
+    const allTasks = displayedContent.weeks.flatMap(
+      (week) => week.days?.flatMap((day) => day.tasks || []) || [],
+    );
     const completedTasks = allTasks.filter((task) => task.completed).length;
     const totalTasks = allTasks.length;
     const progressPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
@@ -111,17 +182,10 @@ export default function RoadmapPage() {
       completedTasks,
       progressPct,
     };
-  }, [roadmap]);
+  }, [displayedContent, roadmap]);
 
   if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="card-glass pulse-card rounded-xl px-8 py-6 text-center">
-          <Loader2 className="spinner-glow mx-auto h-8 w-8 animate-spin text-primary" />
-          <p className="text-micro mt-3 text-muted-foreground">Loading roadmap nodes...</p>
-        </div>
-      </div>
-    );
+    return <RoadmapSkeleton />;
   }
 
   return (
@@ -137,19 +201,19 @@ export default function RoadmapPage() {
             <div className="space-y-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/25 bg-[var(--accent-subtle)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">
                 <Map className="h-3.5 w-3.5" />
-                Strategic roadmap
+                {t("roadmap.hero.badge")}
               </div>
               <div>
-                <h1 className="heading-xl">A strong roadmap removes guesswork from placement prep.</h1>
+                <h1 className="heading-xl">{t("roadmap.hero.title")}</h1>
                 <p className="body-text mt-3 max-w-2xl text-[var(--text-secondary)]">
-                  This page is your sequence engine. Generate the plan, open the current week, then drill down into the exact day and task blocks you need to execute.
+                  {t("roadmap.hero.description")}
                 </p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
-                <Metric label="Total weeks" value={String(roadmapSummary.totalWeeks)} />
-                <Metric label="Current week" value={String(roadmapSummary.currentWeek)} />
-                <Metric label="Completion" value={`${roadmapSummary.progressPct}%`} />
+                <Metric label={t("roadmap.metric.totalWeeks")} value={String(roadmapSummary.totalWeeks)} />
+                <Metric label={t("roadmap.metric.currentWeek")} value={String(roadmapSummary.currentWeek)} />
+                <Metric label={t("roadmap.metric.completion")} value={`${roadmapSummary.progressPct}%`} />
               </div>
 
               <div className="flex flex-wrap gap-3">
@@ -157,26 +221,59 @@ export default function RoadmapPage() {
                   {generating ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      {generatingWeek ? `Generating week ${generatingWeek}...` : "Creating roadmap..."}
+                      {generatingWeek
+                        ? t("roadmap.generatingWeek", { week: generatingWeek })
+                        : t("roadmap.generating")}
                     </>
                   ) : (
                     <>
                       <Sparkles className="h-4 w-4" />
-                      {roadmap ? "Regenerate roadmap" : "Generate roadmap"}
+                      {roadmap ? t("roadmap.regenerate") : t("roadmap.generate")}
                     </>
                   )}
                 </ShimmerButton>
+
+                {roadmap && language !== "en" ? (
+                  <button
+                    onClick={handleToggleTranslation}
+                    disabled={translatingRoadmap}
+                    className="btn-outline inline-flex w-full items-center justify-center gap-2 px-4 py-2.5 text-sm sm:w-auto"
+                  >
+                    {translatingRoadmap ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Languages className="h-4 w-4" />
+                    )}
+                    {translatingRoadmap
+                      ? t("roadmap.translating")
+                      : showTranslatedRoadmap
+                        ? t("roadmap.showOriginal")
+                        : t("roadmap.translate")}
+                  </button>
+                ) : null}
               </div>
             </div>
 
             <div className="card-glass rounded-[24px] border-white/10 p-5 sm:p-6">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                Step-by-step usage
+                {t("roadmap.usage")}
               </p>
               <div className="mt-4 space-y-3">
-                <GuideStep number="01" title="Generate the plan" description="Create the multi-week structure using your current profile and target role." />
-                <GuideStep number="02" title="Expand the active week" description="Open the current week first. That is where your execution focus should live." />
-                <GuideStep number="03" title="Go day by day" description="Use each day as a compact sprint. The roadmap matters only if the daily tasks get finished." />
+                <GuideStep
+                  number="01"
+                  title="Generate the plan"
+                  description="Create the multi-week structure using your current profile and target role."
+                />
+                <GuideStep
+                  number="02"
+                  title="Expand the active week"
+                  description="Open the current week first. That is where your execution focus should live."
+                />
+                <GuideStep
+                  number="03"
+                  title="Go day by day"
+                  description="Use each day as a compact sprint. The roadmap matters only if the daily tasks get finished."
+                />
               </div>
             </div>
           </div>
@@ -194,17 +291,23 @@ export default function RoadmapPage() {
           <div className="card-dark rounded-[24px] p-5 sm:p-6">
             <div className="mb-3 flex items-center justify-between text-sm">
               <span className="text-[var(--text-secondary)]">
-                {generatingWeek ? `Generating week ${generatingWeek} of ${roadmap.total_weeks}` : "Preparing roadmap structure"}
+                {generatingWeek
+                  ? `Generating week ${generatingWeek} of ${roadmap.total_weeks}`
+                  : "Preparing roadmap structure"}
               </span>
               <span className="font-semibold text-[var(--text-primary)]">
-                {generatingWeek ? `${Math.round(((generatingWeek - 1) / roadmap.total_weeks) * 100)}%` : "Starting"}
+                {generatingWeek
+                  ? `${Math.round(((generatingWeek - 1) / roadmap.total_weeks) * 100)}%`
+                  : "Starting"}
               </span>
             </div>
             <div className="h-3 overflow-hidden rounded-full bg-white/5">
               <motion.div
                 className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[#f2d78a]"
                 initial={{ width: 0 }}
-                animate={{ width: `${generatingWeek ? ((generatingWeek - 1) / roadmap.total_weeks) * 100 : 12}%` }}
+                animate={{
+                  width: `${generatingWeek ? ((generatingWeek - 1) / roadmap.total_weeks) * 100 : 12}%`,
+                }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
               />
             </div>
@@ -212,27 +315,39 @@ export default function RoadmapPage() {
         </BlurFade>
       ) : null}
 
-      {roadmap ? (
+      {roadmap && displayedContent ? (
         <section className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
           <BlurFade delay={0.12}>
             <div className="card-dark rounded-[24px] p-5 sm:p-6">
               <div className="mb-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                  Plan health
+                  {t("roadmap.health")}
                 </p>
-                <h2 className="heading-md mt-1">Current roadmap snapshot</h2>
+                <h2 className="heading-md mt-1">{t("roadmap.snapshot")}</h2>
               </div>
 
               <div className="space-y-3">
-                <SnapshotRow label="Target role" value={roadmap.target_role?.replace(/_/g, " ") || "Not specified"} />
-                <SnapshotRow label="Completed tasks" value={`${roadmapSummary.completedTasks}/${roadmapSummary.totalTasks}`} />
-                <SnapshotRow label="Active position" value={`Week ${roadmap.current_week}, Day ${roadmap.current_day}`} />
-                <SnapshotRow label="Estimated length" value={`${roadmap.total_weeks} weeks`} />
+                <SnapshotRow
+                  label={t("roadmap.targetRole")}
+                  value={roadmap.target_role?.replace(/_/g, " ") || "Not specified"}
+                />
+                <SnapshotRow
+                  label={t("roadmap.completedTasks")}
+                  value={`${roadmapSummary.completedTasks}/${roadmapSummary.totalTasks}`}
+                />
+                <SnapshotRow
+                  label={t("roadmap.activePosition")}
+                  value={`Week ${roadmap.current_week}, Day ${roadmap.current_day}`}
+                />
+                <SnapshotRow
+                  label={t("roadmap.estimatedLength")}
+                  value={`${roadmap.total_weeks} weeks`}
+                />
               </div>
 
               <div className="mt-5">
                 <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-[var(--text-secondary)]">Overall completion</span>
+                  <span className="text-[var(--text-secondary)]">{t("roadmap.overallCompletion")}</span>
                   <span className="font-semibold text-[var(--text-primary)]">{roadmapSummary.progressPct}%</span>
                 </div>
                 <div className="h-3 overflow-hidden rounded-full bg-white/5">
@@ -253,18 +368,21 @@ export default function RoadmapPage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
                   Step 1 to {roadmap.total_weeks}
                 </p>
-                <h2 className="heading-md mt-1">Open the roadmap timeline</h2>
+                <h2 className="heading-md mt-1">{t("roadmap.timeline")}</h2>
               </div>
 
               <div className="space-y-4">
-                {roadmap.content.weeks.map((week, index) => {
+                {displayedContent.weeks.map((week, index) => {
                   const isExpanded = expandedWeek === index;
                   const isCurrent = week.week === roadmap.current_week;
                   const isPast = week.week < roadmap.current_week;
                   const isPending = week.pending || !week.days?.length;
                   const weekTasks = week.days?.flatMap((day) => day.tasks || []) || [];
                   const completedTasks = weekTasks.filter((task) => task.completed).length;
-                  const weekProgress = weekTasks.length > 0 ? Math.round((completedTasks / weekTasks.length) * 100) : 0;
+                  const weekProgress =
+                    weekTasks.length > 0
+                      ? Math.round((completedTasks / weekTasks.length) * 100)
+                      : 0;
 
                   return (
                     <div
@@ -307,9 +425,12 @@ export default function RoadmapPage() {
                                   </span>
                                 ) : null}
                               </div>
-                              <h3 className="mt-2 text-base font-semibold text-[var(--text-primary)]">{week.title}</h3>
+                              <h3 className="mt-2 text-base font-semibold text-[var(--text-primary)]">
+                                {week.title}
+                              </h3>
                               <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                                {week.description || "Structured learning, deliberate practice, and interview-oriented reinforcement."}
+                                {week.description ||
+                                  "Structured learning, deliberate practice, and interview-oriented reinforcement."}
                               </p>
                             </div>
 
@@ -340,7 +461,9 @@ export default function RoadmapPage() {
                             </div>
                           ) : (
                             <p className="mt-3 text-sm text-[var(--text-muted)]">
-                              {generatingWeek === week.week ? "Generating tasks for this week..." : "Waiting to generate week details."}
+                              {generatingWeek === week.week
+                                ? t("roadmap.generatingWeekStatus")
+                                : t("roadmap.waiting")}
                             </p>
                           )}
                         </div>
@@ -360,7 +483,8 @@ export default function RoadmapPage() {
                                 const dayKey = `${week.week}-${day.day}-${dayIndex}`;
                                 const isDayExpanded = expandedDay === dayKey;
                                 const totalTasks = day.tasks?.length || 0;
-                                const completedTasksForDay = day.tasks?.filter((task) => task.completed).length || 0;
+                                const completedTasksForDay =
+                                  day.tasks?.filter((task) => task.completed).length || 0;
 
                                 return (
                                   <div key={dayKey} className="rounded-[20px] border border-white/8 bg-black/15">
@@ -376,7 +500,10 @@ export default function RoadmapPage() {
                                           {day.title || `Day ${day.day || dayIndex + 1}`}
                                         </p>
                                         <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                                          {completedTasksForDay}/{totalTasks} tasks completed
+                                          {t("roadmap.tasksCompleted", {
+                                            completed: completedTasksForDay,
+                                            total: totalTasks,
+                                          })}
                                         </p>
                                       </div>
                                       {isDayExpanded ? (
@@ -414,7 +541,13 @@ export default function RoadmapPage() {
                                                     </div>
                                                     <div className="min-w-0 flex-1">
                                                       <div className="flex flex-wrap items-center gap-2">
-                                                        <p className={`text-sm font-semibold ${task.completed ? "line-through text-[var(--text-secondary)]" : "text-[var(--text-primary)]"}`}>
+                                                        <p
+                                                          className={`text-sm font-semibold ${
+                                                            task.completed
+                                                              ? "line-through text-[var(--text-secondary)]"
+                                                              : "text-[var(--text-primary)]"
+                                                          }`}
+                                                        >
                                                           {task.title}
                                                         </p>
                                                         <span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
@@ -422,7 +555,9 @@ export default function RoadmapPage() {
                                                         </span>
                                                       </div>
                                                       {task.description ? (
-                                                        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{task.description}</p>
+                                                        <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                                                          {task.description}
+                                                        </p>
                                                       ) : null}
                                                       <div className="mt-3 flex flex-wrap items-center gap-2">
                                                         {task.duration_minutes ? (
@@ -479,9 +614,9 @@ export default function RoadmapPage() {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent-subtle)] text-[var(--accent)]">
             <Map className="h-6 w-6" />
           </div>
-          <h2 className="heading-lg">No roadmap yet</h2>
+          <h2 className="heading-lg">{t("roadmap.noRoadmap")}</h2>
           <p className="body-text mx-auto mt-2 max-w-2xl text-[var(--text-secondary)]">
-            Generate a personalized roadmap to turn your target role into a week-by-week preparation system.
+            {t("roadmap.noRoadmapDescription")}
           </p>
         </div>
       )}
@@ -492,7 +627,9 @@ export default function RoadmapPage() {
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+        {label}
+      </p>
       <p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{value}</p>
     </div>
   );
@@ -526,7 +663,9 @@ function SnapshotRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3">
       <span className="text-sm text-[var(--text-secondary)]">{label}</span>
-      <span className="max-w-[12rem] truncate text-sm font-semibold text-[var(--text-primary)]">{value}</span>
+      <span className="max-w-[12rem] truncate text-sm font-semibold text-[var(--text-primary)]">
+        {value}
+      </span>
     </div>
   );
 }

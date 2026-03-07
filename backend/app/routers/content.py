@@ -401,6 +401,20 @@ def translate_roadmap(
                 return result.get("translated_text", text)
             except Exception:
                 return text
+
+        def translate_resource_item(resource: object):
+            if isinstance(resource, str):
+                return translate_text_field(resource)
+
+            if not isinstance(resource, dict):
+                return resource
+
+            translated_resource = dict(resource)
+            if translated_resource.get("title"):
+                translated_resource["title"] = translate_text_field(translated_resource["title"])
+            if translated_resource.get("description"):
+                translated_resource["description"] = translate_text_field(translated_resource["description"])
+            return translated_resource
         
         # Deep copy and translate content
         import copy
@@ -409,10 +423,14 @@ def translate_roadmap(
         # Translate title
         if "title" in translated_content:
             translated_content["title"] = translate_text_field(translated_content["title"])
-        
+
         # Translate weeks
         if "weeks" in translated_content:
             for week in translated_content["weeks"]:
+                if "title" in week:
+                    week["title"] = translate_text_field(week["title"])
+                if "description" in week:
+                    week["description"] = translate_text_field(week["description"])
                 if "theme" in week:
                     week["theme"] = translate_text_field(week["theme"])
                 
@@ -427,6 +445,8 @@ def translate_roadmap(
                     for day in week["days"]:
                         if "title" in day:
                             day["title"] = translate_text_field(day["title"])
+                        if "focus_area" in day:
+                            day["focus_area"] = translate_text_field(day["focus_area"])
                         
                         # Translate tasks
                         if "tasks" in day:
@@ -437,7 +457,7 @@ def translate_roadmap(
                                     task["description"] = translate_text_field(task["description"])
                                 if "resources" in task:
                                     task["resources"] = [
-                                        translate_text_field(res) for res in task["resources"]
+                                        translate_resource_item(res) for res in task["resources"]
                                     ]
         
         return TranslateRoadmapResponse(

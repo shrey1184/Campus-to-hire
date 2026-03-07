@@ -1,29 +1,33 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
 import { interviewApi } from "@/lib/api";
+import { fireConfetti } from "@/lib/confetti";
+import { useLanguage } from "@/lib/language-context";
 import type { Interview, ChatMessage } from "@/types";
 import { TARGET_ROLES, TARGET_COMPANIES } from "@/types";
 import { BlurFade } from "@/components/magic/BlurFade";
 import { ShimmerButton } from "@/components/magic/ShimmerButton";
 import { NumberTicker } from "@/components/magic/NumberTicker";
 import {
-  MessageSquare,
-  Send,
-  Loader2,
-  Play,
-  StopCircle,
-  Star,
-  Trophy,
+  AlertTriangle,
   Bot,
+  Loader2,
+  MessageSquare,
+  Play,
+  Send,
+  Star,
+  StopCircle,
+  Trophy,
   User,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 export default function InterviewPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [interview, setInterview] = useState<Interview | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,19 +36,35 @@ export default function InterviewPage() {
   const [selectedRole, setSelectedRole] = useState(user?.target_role || "sde");
   const [selectedCompany, setSelectedCompany] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
+  const [error, setError] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const celebratedInterviewRef = useRef<string | null>(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [interview?.messages]);
 
+  useEffect(() => {
+    if (
+      interview?.id &&
+      interview.score !== null &&
+      interview.score !== undefined &&
+      interview.score >= 70 &&
+      celebratedInterviewRef.current !== interview.id
+    ) {
+      fireConfetti();
+      celebratedInterviewRef.current = interview.id;
+    }
+  }, [interview]);
+
   async function handleStart() {
     setStarting(true);
+    setError("");
     try {
       const iv = await interviewApi.start(selectedRole, selectedCompany || undefined);
       setInterview(iv);
-    } catch (err) {
-      console.error("Failed to start interview:", err);
+    } catch {
+      setError(t("interview.errorStart"));
     } finally {
       setStarting(false);
     }
@@ -53,12 +73,13 @@ export default function InterviewPage() {
   async function handleSend() {
     if (!interview || !message.trim()) return;
     setLoading(true);
+    setError("");
     try {
       const updated = await interviewApi.respond(interview.id, message.trim());
       setInterview(updated);
       setMessage("");
-    } catch (err) {
-      console.error("Failed to send:", err);
+    } catch {
+      setError(t("interview.errorSend"));
     } finally {
       setLoading(false);
     }
@@ -67,11 +88,12 @@ export default function InterviewPage() {
   async function handleEnd() {
     if (!interview) return;
     setEnding(true);
+    setError("");
     try {
       const updated = await interviewApi.end(interview.id);
       setInterview(updated);
-    } catch (err) {
-      console.error("Failed to end interview:", err);
+    } catch {
+      setError(t("interview.errorEnd"));
     } finally {
       setEnding(false);
     }
@@ -80,30 +102,41 @@ export default function InterviewPage() {
   function handleNewInterview() {
     setInterview(null);
     setMessage("");
+    setError("");
   }
 
   const isFinished = interview?.score !== null && interview?.score !== undefined;
 
   if (!interview) {
     return (
-      <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+      <motion.div
+        className="space-y-6"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4 }}
+      >
         <div>
           <h1 className="heading-lg flex items-center gap-2 font-bold">
             <MessageSquare className="h-6 w-6 text-primary" />
-            Mock Interview
+            {t("interview.title")}
           </h1>
-          <p className="body-text mt-1 text-muted-foreground">
-            Practice with an AI interviewer tailored to your target role
-          </p>
+          <p className="body-text mt-1 text-muted-foreground">{t("interview.subtitle")}</p>
         </div>
 
+        {error ? (
+          <div className="flex items-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+            <AlertTriangle className="h-4 w-4" />
+            {error}
+          </div>
+        ) : null}
+
         <div className="mx-auto max-w-lg rounded-2xl p-5 card-dark sm:p-6">
-          <h2 className="mb-4 heading-md font-semibold">Setup Your Interview</h2>
+          <h2 className="mb-4 heading-md font-semibold">{t("interview.setup")}</h2>
 
           <div className="space-y-4">
             <BlurFade delay={0.1}>
               <div>
-                <label className="mb-1.5 block text-sm font-medium">Target Role</label>
+                <label className="mb-1.5 block text-sm font-medium">{t("interview.targetRole")}</label>
                 <select
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value)}
@@ -120,13 +153,13 @@ export default function InterviewPage() {
 
             <BlurFade delay={0.2}>
               <div>
-                <label className="mb-1.5 block text-sm font-medium">Company (optional)</label>
+                <label className="mb-1.5 block text-sm font-medium">{t("interview.company")}</label>
                 <select
                   value={selectedCompany}
                   onChange={(e) => setSelectedCompany(e.target.value)}
                   className="input-dark w-full rounded-lg px-4 py-2.5 text-sm outline-none"
                 >
-                  <option value="">General Interview</option>
+                  <option value="">{t("interview.general")}</option>
                   {TARGET_COMPANIES.map((c) => (
                     <option key={c} value={c}>
                       {c}
@@ -142,7 +175,7 @@ export default function InterviewPage() {
               ) : (
                 <>
                   <Play className="h-4 w-4" />
-                  Start Interview
+                  {t("interview.start")}
                 </>
               )}
             </ShimmerButton>
@@ -154,7 +187,7 @@ export default function InterviewPage() {
 
   return (
     <motion.div
-      className="flex h-[calc(100vh-8rem)] flex-col lg:h-[calc(100vh-3rem)]"
+      className="flex h-[calc(100vh-9rem)] flex-col lg:h-[calc(100vh-3rem)]"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
@@ -167,26 +200,39 @@ export default function InterviewPage() {
             {interview.company && ` - ${interview.company}`}
           </h1>
           <p className="text-xs text-muted-foreground">
-            {interview.messages.length} messages
-            {isFinished && ` | Score: ${interview.score}/100`}
+            {t("interview.messages", { count: interview.messages.length })}
+            {isFinished
+              ? ` | ${t("interview.score", { score: interview.score ?? 0 })}`
+              : ""}
           </p>
         </div>
         <div className="flex gap-2 self-start sm:self-auto">
-          {!isFinished && (
+          {!isFinished ? (
             <button
               onClick={handleEnd}
               disabled={ending}
               className="btn-outline flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground"
             >
-              {ending ? <Loader2 className="h-3 w-3 animate-spin spinner-glow" /> : <StopCircle className="h-3 w-3" />}
-              End
+              {ending ? (
+                <Loader2 className="h-3 w-3 animate-spin spinner-glow" />
+              ) : (
+                <StopCircle className="h-3 w-3" />
+              )}
+              {t("interview.end")}
             </button>
-          )}
+          ) : null}
           <button onClick={handleNewInterview} className="btn-outline rounded-lg px-3 py-1.5 text-xs font-medium">
-            New Interview
+            {t("interview.new")}
           </button>
         </div>
       </div>
+
+      {error ? (
+        <div className="mb-4 flex items-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          <AlertTriangle className="h-4 w-4" />
+          {error}
+        </div>
+      ) : null}
 
       <div className="flex-1 space-y-4 overflow-y-auto">
         {interview.messages.map((msg: ChatMessage, i: number) => (
@@ -211,7 +257,9 @@ export default function InterviewPage() {
                 components={{
                   p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
                   code: ({ children }) => (
-                    <code className="rounded bg-background/50 px-1 py-0.5 text-xs font-mono">{children}</code>
+                    <code className="rounded bg-background/50 px-1 py-0.5 text-xs font-mono">
+                      {children}
+                    </code>
                   ),
                 }}
               >
@@ -226,7 +274,7 @@ export default function InterviewPage() {
           </motion.div>
         ))}
 
-        {isFinished && (
+        {isFinished ? (
           <div className="card-glass rounded-2xl border border-primary/30 bg-primary/5 p-6 text-center">
             <Trophy className="mx-auto mb-2 h-10 w-10 text-primary" />
             <p className="text-2xl font-bold">
@@ -243,31 +291,35 @@ export default function InterviewPage() {
                 >
                   <Star
                     className={`h-5 w-5 ${
-                      s <= Math.round((interview.score || 0) / 20) ? "fill-primary text-primary" : "text-muted"
+                      s <= Math.round((interview.score || 0) / 20)
+                        ? "fill-primary text-primary"
+                        : "text-muted"
                     }`}
                   />
                 </motion.div>
               ))}
             </div>
-            {interview.feedback && (
+            {interview.feedback ? (
               <BlurFade delay={0.12}>
                 <div className="text-left text-sm">
-                  <p className="mb-1 font-semibold">Feedback:</p>
+                  <p className="mb-1 font-semibold">{t("interview.feedback")}</p>
                   <ReactMarkdown>{interview.feedback}</ReactMarkdown>
                 </div>
               </BlurFade>
-            )}
+            ) : null}
           </div>
-        )}
+        ) : null}
 
         <div ref={chatEndRef} />
       </div>
 
-      {!isFinished && (
+      {!isFinished ? (
         <motion.div
           className="mt-4 flex gap-2 border-t border-border/40 pt-4"
           animate={{
-            boxShadow: inputFocused ? "0 0 0 1px var(--accent), 0 0 20px var(--accent-glow)" : "0 0 0 0 transparent",
+            boxShadow: inputFocused
+              ? "0 0 0 1px var(--accent), 0 0 20px var(--accent-glow)"
+              : "0 0 0 0 transparent",
           }}
           transition={{ duration: 0.2 }}
           style={{ borderRadius: "1rem", paddingInline: "0.25rem" }}
@@ -279,7 +331,7 @@ export default function InterviewPage() {
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
             onFocus={() => setInputFocused(true)}
             onBlur={() => setInputFocused(false)}
-            placeholder="Type your answer..."
+            placeholder={t("interview.placeholder")}
             disabled={loading}
             className="input-dark flex-1 rounded-lg px-4 py-2.5 text-sm outline-none disabled:opacity-50"
           />
@@ -288,10 +340,14 @@ export default function InterviewPage() {
             disabled={loading || !message.trim()}
             className="btn-accent flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50"
           >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin spinner-glow" /> : <Send className="h-4 w-4" />}
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin spinner-glow" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </button>
         </motion.div>
-      )}
+      ) : null}
     </motion.div>
   );
 }

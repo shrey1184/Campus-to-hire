@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { BlurFade } from "@/components/magic/BlurFade";
 import { ShimmerButton } from "@/components/magic/ShimmerButton";
 import { jdApi } from "@/lib/api";
+import { useLanguage } from "@/lib/language-context";
 import type { JDAnalysis } from "@/types";
 import {
   AlertTriangle,
@@ -36,6 +37,7 @@ Nice to have:
 - Previous internship experience`;
 
 export default function JDAnalyzePage() {
+  const { t } = useLanguage();
   const [jdText, setJdText] = useState("");
   const [analysis, setAnalysis] = useState<JDAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
@@ -101,25 +103,25 @@ export default function JDAnalyzePage() {
             <div className="space-y-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/25 bg-[var(--accent-subtle)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">
                 <FileSearch className="h-3.5 w-3.5" />
-                JD reasoning engine
+                {t("jd.hero.badge")}
               </div>
               <div>
-                <h1 className="heading-xl">Read the role, compare the gaps, then act on the delta.</h1>
+                <h1 className="heading-xl">{t("jd.hero.title")}</h1>
                 <p className="body-text mt-3 max-w-2xl text-[var(--text-secondary)]">
-                  This page is intentionally sequential: paste the job description, let the AI extract expectations, then convert the missing skills into your next roadmap decisions.
+                  {t("jd.hero.description")}
                 </p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
-                <Metric label="Match score" value={analysis ? `${summary.matchScore}%` : "--"} />
-                <Metric label="Required skills" value={analysis ? String(summary.totalRequired) : "--"} />
-                <Metric label="Gap count" value={analysis ? String(summary.gapCount) : "--"} />
+                <Metric label={t("jd.metric.matchScore")} value={analysis ? `${summary.matchScore}%` : "--"} />
+                <Metric label={t("jd.metric.requiredSkills")} value={analysis ? String(summary.totalRequired) : "--"} />
+                <Metric label={t("jd.metric.gapCount")} value={analysis ? String(summary.gapCount) : "--"} />
               </div>
             </div>
 
             <div className="card-glass rounded-[24px] border-white/10 p-5 sm:p-6">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                Step-by-step
+                {t("jd.stepByStep")}
               </p>
               <div className="mt-4 space-y-3">
                 <GuideStep number="01" title="Paste the JD" description="Use the full description, not only the bullet list, so the role intent is preserved." />
@@ -139,18 +141,18 @@ export default function JDAnalyzePage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
                   Step 1
                 </p>
-                <h2 className="heading-md mt-1">Input the job description</h2>
+                <h2 className="heading-md mt-1">{t("jd.input")}</h2>
               </div>
               <button onClick={() => setJdText(SAMPLE_JD)} className="link-glow inline-flex items-center gap-2 text-sm">
                 <Clipboard className="h-4 w-4" />
-                Use sample
+                {t("jd.useSample")}
               </button>
             </div>
 
             <textarea
               value={jdText}
               onChange={(event) => setJdText(event.target.value)}
-              placeholder="Paste the complete job description here..."
+              placeholder={t("jd.placeholder")}
               rows={16}
               className="input-dark w-full resize-none rounded-[22px] px-4 py-4 text-sm leading-6 outline-none"
             />
@@ -160,12 +162,12 @@ export default function JDAnalyzePage() {
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Analyzing JD...
+                    {t("jd.analyzing")}
                   </>
                 ) : (
                   <>
                     <Sparkles className="h-4 w-4" />
-                    Analyze job description
+                    {t("jd.analyze")}
                   </>
                 )}
               </ShimmerButton>
@@ -182,12 +184,12 @@ export default function JDAnalyzePage() {
 
         <BlurFade delay={0.14}>
           <div className="card-dark rounded-[24px] p-5 sm:p-6">
-            <div className="mb-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                Step 2
-              </p>
-              <h2 className="heading-md mt-1">Read the result summary</h2>
-            </div>
+              <div className="mb-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                  Step 2
+                </p>
+                <h2 className="heading-md mt-1">{t("jd.summary")}</h2>
+              </div>
 
             {analysis ? (
               <div className="space-y-4">
@@ -229,8 +231,8 @@ export default function JDAnalyzePage() {
               </div>
             ) : (
               <EmptyPanel
-                title="No analysis yet"
-                description="Run the analyzer to convert the JD into structured requirements, gap analysis, and recommendations."
+                title={t("jd.noAnalysis")}
+                description={t("jd.noAnalysisDescription")}
               />
             )}
           </div>
