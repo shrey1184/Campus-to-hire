@@ -40,6 +40,7 @@ class Roadmap(Base):
     user_id = Column(String, ForeignKey("users.id"))
     content = Column(JSON)
     pace = Column(String, default="standard")
+    target_role = Column(String, nullable=True)
     total_weeks = Column(Integer)
     current_week = Column(Integer, default=1)
     current_day = Column(Integer, default=1)
@@ -56,6 +57,7 @@ class DailyPlan(Base):
     week = Column(Integer)
     day = Column(Integer)
     tasks = Column(JSON)
+    focus_area = Column(String, nullable=True)
     created_at = Column(DateTime, default=func.now())
 
 

@@ -255,11 +255,17 @@ def _normalize_day(day: object, week_num: int, day_num: int) -> dict:
             )
         ]
 
-    return {
+    result: dict = {
         "day": parsed_day_num,
         "title": title or f"Day {parsed_day_num}",
         "tasks": tasks,
     }
+
+    focus_area = str(data.get("focus_area") or "").strip()
+    if focus_area:
+        result["focus_area"] = focus_area
+
+    return result
 
 
 def _normalize_week(week: object, week_num: int, days_per_week: int) -> dict:
@@ -418,6 +424,7 @@ def generate_roadmap(
         content=normalized_content,
         total_weeks=total_weeks,
         is_active=True,
+        target_role=current_user.target_role,
     )
     db.add(roadmap)
     db.commit()

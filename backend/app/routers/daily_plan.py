@@ -25,6 +25,15 @@ def _get_active_roadmap(user: User, db: Session) -> Roadmap:
     return roadmap
 
 
+def _get_day_focus_area(roadmap: Roadmap, week: int, day: int) -> str | None:
+    """Extract focus_area for the given week/day from the roadmap content JSON."""
+    try:
+        day_data = roadmap.content["weeks"][week - 1]["days"][day - 1]
+        return day_data.get("focus_area") or day_data.get("title") or None
+    except (KeyError, IndexError, TypeError):
+        return None
+
+
 def _get_today_plan(roadmap: Roadmap, db: Session) -> DailyPlan | None:
     """Return the DailyPlan row for the roadmap's current week/day, if it exists."""
     return (
@@ -157,6 +166,7 @@ def get_today_plan(
         week=roadmap.current_week,
         day=roadmap.current_day,
         tasks=tasks,
+        focus_area=_get_day_focus_area(roadmap, roadmap.current_week, roadmap.current_day),
     )
     db.add(plan)
 
@@ -262,6 +272,7 @@ def advance_to_next_day(
         week=roadmap.current_week,
         day=roadmap.current_day,
         tasks=tasks,
+        focus_area=_get_day_focus_area(roadmap, roadmap.current_week, roadmap.current_day),
     )
     db.add(new_plan)
     _sync_tasks_to_roadmap(roadmap, roadmap.current_week, roadmap.current_day, tasks, db)

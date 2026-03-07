@@ -190,20 +190,29 @@ def seed_demo():
             current_week=1,
             current_day=3,
             is_active=True,
+            target_role="sde",
         )
         db.add(roadmap)
         db.flush()
 
         now = datetime.now()
+
+        def _focus(week_idx: int, day_idx: int) -> str | None:
+            try:
+                d = roadmap_content["weeks"][week_idx]["days"][day_idx]
+                return d.get("focus_area") or d.get("title") or None
+            except (KeyError, IndexError):
+                return None
+
         daily_plan_payloads = [
-            (1, 1, roadmap_content["weeks"][0]["days"][0]["tasks"], now - timedelta(days=4)),
-            (1, 2, roadmap_content["weeks"][0]["days"][1]["tasks"], now - timedelta(days=3)),
-            (1, 3, roadmap_content["weeks"][0]["days"][2]["tasks"], now - timedelta(days=2)),
-            (2, 1, roadmap_content["weeks"][1]["days"][0]["tasks"], now - timedelta(days=1)),
-            (2, 2, roadmap_content["weeks"][1]["days"][1]["tasks"], now),
+            (1, 1, roadmap_content["weeks"][0]["days"][0]["tasks"], now - timedelta(days=4), _focus(0, 0)),
+            (1, 2, roadmap_content["weeks"][0]["days"][1]["tasks"], now - timedelta(days=3), _focus(0, 1)),
+            (1, 3, roadmap_content["weeks"][0]["days"][2]["tasks"], now - timedelta(days=2), _focus(0, 2)),
+            (2, 1, roadmap_content["weeks"][1]["days"][0]["tasks"], now - timedelta(days=1), _focus(1, 0)),
+            (2, 2, roadmap_content["weeks"][1]["days"][1]["tasks"], now, _focus(1, 1)),
         ]
 
-        for week, day, tasks, created_at in daily_plan_payloads:
+        for week, day, tasks, created_at, focus_area in daily_plan_payloads:
             db.add(
                 DailyPlan(
                     roadmap_id=roadmap.id,
@@ -211,6 +220,7 @@ def seed_demo():
                     week=week,
                     day=day,
                     tasks=tasks,
+                    focus_area=focus_area,
                     created_at=created_at,
                 )
             )

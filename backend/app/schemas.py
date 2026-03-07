@@ -168,6 +168,7 @@ class RoadmapResponse(BaseModel):
     user_id: str
     content: dict
     pace: str
+    target_role: Optional[str] = None
     total_weeks: int
     current_week: int
     current_day: int
@@ -195,6 +196,7 @@ class DailyPlanResponse(BaseModel):
     week: int
     day: int
     tasks: list[dict]
+    focus_area: Optional[str] = None
     created_at: datetime
 
 
