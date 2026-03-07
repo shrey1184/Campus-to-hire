@@ -25,6 +25,7 @@ import {
   Loader2,
 } from "lucide-react";
 import Logo from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const STEPS = [
   { title: "Background", icon: GraduationCap, description: "Tell us about your education" },
@@ -140,6 +141,7 @@ export default function OnboardingPage() {
           <div className="mb-8 text-center">
             <div className="mb-4 flex items-center justify-center gap-3">
               <Logo size="md" linked />
+              <ThemeToggle compact />
             </div>
             <h1 className="heading-lg font-bold">Set Up Your Profile</h1>
             <p className="body-text mt-1 text-muted-foreground">

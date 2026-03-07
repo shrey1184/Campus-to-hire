@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { LanguageProvider } from "@/lib/language-context";
+import { ThemeProvider } from "@/lib/theme-context";
 import { HeroUIProviderWrapper } from "@/components/HeroUIProviderWrapper";
 
 export const metadata: Metadata = {
@@ -29,9 +30,11 @@ export default function RootLayout({
         }
       >
         <HeroUIProviderWrapper>
-          <AuthProvider>
-            <LanguageProvider>{children}</LanguageProvider>
-          </AuthProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <LanguageProvider>{children}</LanguageProvider>
+            </AuthProvider>
+          </ThemeProvider>
         </HeroUIProviderWrapper>
       </body>
     </html>

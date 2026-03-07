@@ -20,6 +20,8 @@ import { BlurFade } from "@/components/magic/BlurFade";
 import { Marquee } from "@/components/magic/Marquee";
 import { ShimmerButton } from "@/components/magic/ShimmerButton";
 
+import { ThemeToggle } from "@/components/ThemeToggle";
+
 import {
   GraduationCap,
   Target,
@@ -251,7 +253,7 @@ function HeroSection({ user, loading }: { user: UserProfile | null; loading: boo
   return (
     <AuroraBackground className="min-h-screen">
       {/* Spotlight Effect */}
-      <Spotlight className="hidden md:block" fill="rgba(201, 168, 76, 0.12)" />
+      <Spotlight className="hidden md:block" fill="var(--accent-subtle)" />
       
       {/* Navigation */}
       <motion.nav 
@@ -263,6 +265,7 @@ function HeroSection({ user, loading }: { user: UserProfile | null; loading: boo
         <div className="container-main flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
           <Logo size="md" />
           <div className="flex items-center gap-3">
+            <ThemeToggle compact />
             {!loading && (
               user ? (
                 <MagneticButton href="/dashboard">

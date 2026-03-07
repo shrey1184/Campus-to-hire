@@ -35,7 +35,7 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            className={`flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] text-sm text-[var(--text-primary)] transition hover:border-[var(--accent)]/25 hover:bg-[var(--accent-subtle)] ${
+            className={`flex items-center gap-2 rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] text-sm text-[var(--text-primary)] transition hover:border-[var(--accent)]/25 hover:bg-[var(--accent-subtle)] ${
               compact ? "px-3 py-2" : "w-full justify-between px-3 py-2.5"
             }`}
             aria-label={t("language.switch")}
@@ -57,10 +57,10 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
 
         <DropdownMenuContent
           align={compact ? "end" : "start"}
-          className="w-56 border-white/10 bg-[#0e0e0e]/95 text-[var(--text-primary)] backdrop-blur-xl"
+          className="w-56 border-[var(--border-default)] bg-[var(--bg-surface)]/95 text-[var(--text-primary)] backdrop-blur-xl"
         >
           <DropdownMenuLabel>{t("language.switch")}</DropdownMenuLabel>
-          <DropdownMenuSeparator className="bg-white/8" />
+          <DropdownMenuSeparator className="bg-[var(--border-default)]" />
           {SUPPORTED_LANGUAGE_OPTIONS.map((option) => (
             <DropdownMenuItem
               key={option.code}

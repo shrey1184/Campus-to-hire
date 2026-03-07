@@ -94,6 +94,20 @@
   /* ── Color Scheme ───────────────────────────────────────────── */
   --color-scheme:     dark;
 
+  /* ── Section Hero Gradient ────────────────────────────────────── */
+  --section-hero-gradient: radial-gradient(circle at top left, var(--accent-subtle), transparent 30%), linear-gradient(135deg, #101010, #080808);
+  --section-hero-side:     linear-gradient(180deg, var(--accent-glow), transparent);
+
+  /* ── Subtle overlays (used by inline Tailwind classes) ──────── */
+  --subtle-overlay:       rgba(255,255,255,0.02);
+  --subtle-overlay-2:     rgba(255,255,255,0.03);
+  --subtle-overlay-3:     rgba(255,255,255,0.05);
+  --subtle-border:        rgba(255,255,255,0.08);
+  --subtle-border-2:      rgba(255,255,255,0.10);
+  --icon-overlay:         rgba(0,0,0,0.25);
+  --icon-overlay-heavy:   rgba(0,0,0,0.30);
+  --progress-track-bg:    rgba(255,255,255,0.05);
+
   /* ── Tailwind Token Mapping (DO NOT remove — Tailwind reads these) */
   --background:           var(--bg-base);
   --foreground:           var(--text-primary);
@@ -110,6 +124,101 @@
   --border:               var(--border-default);
   --input:                var(--input-bg);
   --ring:                 var(--ring-color);
+}
+
+/* ================================================================
+   LIGHT THEME
+   ================================================================ */
+[data-theme="light"] {
+  /* ── Background Scale (light → dim) ─────────────────────────── */
+  --bg-base:       #f8f8f6;
+  --bg-surface:    #ffffff;
+  --bg-elevated:   #f0eeeb;
+  --bg-overlay:    #e6e4e0;
+
+  /* ── Text Scale (dark → light) ──────────────────────────────── */
+  --text-primary:   #1a1a1a;
+  --text-secondary: #555555;
+  --text-muted:     #999999;
+  --text-inverse:   #ffffff;
+
+  /* ── Brand / Accent (darkened for readability on light bg) ──── */
+  --accent:         #9a7b2e;
+  --accent-hover:   #836820;
+  --accent-subtle:  rgba(154, 123, 46, 0.10);
+  --accent-glow:    rgba(154, 123, 46, 0.14);
+
+  /* ── Borders ────────────────────────────────────────────────── */
+  --border-default: #e2e0dc;
+  --border-hover:   #cbc8c2;
+  --border-active:  var(--accent);
+
+  /* ── Functional Colors ──────────────────────────────────────── */
+  --destructive:    #dc3545;
+  --success:        #1a8754;
+  --warning:        var(--accent);
+  --info:           #2563eb;
+
+  /* ── Input ──────────────────────────────────────────────────── */
+  --input-bg:       #ffffff;
+
+  /* ── Ring / Focus ───────────────────────────────────────────── */
+  --ring-color:     var(--accent);
+
+  /* ── Shadows ────────────────────────────────────────────────── */
+  --shadow-sm:    0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md:    0 4px 14px rgba(0, 0, 0, 0.08);
+  --shadow-lg:    0 8px 28px rgba(0, 0, 0, 0.10);
+  --shadow-glow:  0 0 20px var(--accent-glow);
+
+  /* ── Hero-section (landing page) ────────────────────────────── */
+  --hero-bg:                #f8f8f6;
+  --hero-border:            #e2e0dc;
+  --hero-badge-bg:          #1a1a1a;
+  --hero-badge-text:        #ffffff;
+  --hero-subtitle-text:     #777777;
+  --hero-login-bg:          #ffffff;
+  --hero-login-border:      #e2e0dc;
+  --hero-login-text:        #1a1a1a;
+  --hero-cta-bg:            #1a1a1a;
+  --hero-cta-text:          #ffffff;
+  --hero-title-text:        #1a1a1a;
+  --hero-progress-track:    #e2e0dc;
+  --hero-progress-fill:     #1a1a1a;
+  --hero-dot-glow:          rgba(0,0,0,0.12);
+  --hero-card-bg:           #ffffff;
+  --hero-card-text:         #1a1a1a;
+  --hero-card-subtitle:     #555555;
+  --hero-card-btn-bg:       #1a1a1a;
+  --hero-card-btn-text:     #ffffff;
+  --hero-action-border:     #e2e0dc;
+  --hero-action-text:       #1a1a1a;
+  --hero-action-hover:      #f0eeeb;
+  --hero-bottom-border:     #e2e0dc;
+  --hero-grid-line:         rgba(0,0,0,0.04);
+
+  /* ── Glass Card ─────────────────────────────────────────────── */
+  --glass-bg:         rgba(255, 255, 255, 0.85);
+
+  /* ── Dot Grid ───────────────────────────────────────────────── */
+  --dot-grid-color:   rgba(0, 0, 0, 0.03);
+
+  /* ── Color Scheme ───────────────────────────────────────────── */
+  --color-scheme:     light;
+
+  /* ── Section Hero Gradient (light variant) ──────────────────── */
+  --section-hero-gradient: radial-gradient(circle at top left, var(--accent-subtle), transparent 30%), linear-gradient(135deg, #ffffff, #f8f7f2);
+  --section-hero-side:     linear-gradient(180deg, var(--accent-glow), transparent);
+
+  /* ── Subtle overlays (inverted for light bg) ────────────────── */
+  --subtle-overlay:       rgba(0,0,0,0.02);
+  --subtle-overlay-2:     rgba(0,0,0,0.03);
+  --subtle-overlay-3:     rgba(0,0,0,0.04);
+  --subtle-border:        rgba(0,0,0,0.07);
+  --subtle-border-2:      rgba(0,0,0,0.09);
+  --icon-overlay:         rgba(0,0,0,0.06);
+  --icon-overlay-heavy:   rgba(0,0,0,0.08);
+  --progress-track-bg:    rgba(0,0,0,0.06);
 }
 
 /* ─── Tailwind v4 Theme Integration ───────────────────────────── */
@@ -165,6 +274,14 @@ body::before {
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+
+/* ─── Section Hero Gradient (theme-aware) ─────────────────────── */
+.section-hero-gradient {
+  background: var(--section-hero-gradient);
+}
+.section-hero-side {
+  background: var(--section-hero-side);
+}
 
 /* ─── Animations ──────────────────────────────────────────────── */
 @keyframes fadeIn {
@@ -362,7 +479,7 @@ body::before {
 
 /* ─── Gradient Text ───────────────────────────────────────────── */
 .text-gradient {
-  background: linear-gradient(135deg, var(--accent), #e8d5a3);
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -507,4 +624,22 @@ body::before {
 .animate-gradient-shift {
   background-size: 200% 200%;
   animation: gradient-shift 8s ease infinite;
+}
+
+/* ─── Light-theme specific overrides ──────────────────────────── */
+[data-theme="light"] .btn-accent:focus-visible,
+[data-theme="light"] .btn-outline:focus-visible,
+[data-theme="light"] .input-dark:focus-visible {
+  box-shadow: 0 0 0 2px var(--bg-base), 0 0 0 4px var(--accent);
+}
+
+[data-theme="light"] .animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,0.04), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Smooth theme transitions */
+html {
+  transition: background-color 0.2s ease, color 0.2s ease;
 }

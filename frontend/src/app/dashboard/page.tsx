@@ -224,8 +224,8 @@ export default function DashboardPage() {
       ) : null}
 
       <BlurFade delay={0.05}>
-        <section className="relative overflow-hidden rounded-[28px] border border-[var(--accent)]/20 bg-[radial-gradient(circle_at_top_left,rgba(201,168,76,0.16),transparent_30%),linear-gradient(135deg,#101010,#080808)] p-6 sm:p-8">
-          <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[linear-gradient(180deg,rgba(201,168,76,0.08),transparent)] lg:block" />
+        <section className="relative overflow-hidden rounded-[28px] border border-[var(--accent)]/20 section-hero-gradient p-6 sm:p-8">
+          <div className="absolute inset-y-0 right-0 hidden w-1/3 section-hero-side lg:block" />
           <div className="relative grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
             <div className="space-y-5">
               <div className="inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/25 bg-[var(--accent-subtle)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">
@@ -312,7 +312,7 @@ export default function DashboardPage() {
 
               <div className="mb-5 h-3 overflow-hidden rounded-full bg-white/5">
                 <motion.div
-                  className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[#f2d78a]"
+                  className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-hover)]"
                   initial={{ width: 0 }}
                   animate={{
                     width: `${Math.min(
@@ -686,7 +686,7 @@ function PerformanceChart({
           <div key={`${labels[index]}-${index}`} className="flex flex-1 flex-col items-center gap-2">
             <div className="flex h-full w-full items-end">
               <motion.div
-                className="w-full rounded-t-[16px] bg-gradient-to-t from-[var(--accent)] to-[#f2d78a]"
+                className="w-full rounded-t-[16px] bg-gradient-to-t from-[var(--accent)] to-[var(--accent-hover)]"
                 initial={{ height: 0 }}
                 animate={{ height: `${Math.max((value / maxValue) * 100, 8)}%` }}
                 transition={{ duration: 0.35, delay: index * 0.04 }}

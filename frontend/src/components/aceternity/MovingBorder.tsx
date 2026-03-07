@@ -27,7 +27,7 @@ export const MovingBorder = ({
   borderClassName,
   borderWidth = 1,
   as: Component = "div",
-  colors = ["rgba(201, 168, 76, 0.8)", "rgba(201, 168, 76, 0.2)", "transparent"],
+  colors = ["var(--accent-blob)", "var(--accent-subtle)", "transparent"],
 }: MovingBorderProps) => {
   const shouldReduceMotion = useReducedMotion();
 

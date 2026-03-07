@@ -30,6 +30,8 @@ import { ShimmerButton } from "@/components/magic/ShimmerButton";
 import { GlowingOrb } from "@/components/magic/GlowingOrb";
 import { AnimatedGradientText } from "@/components/magic/AnimatedGradientText";
 
+import { ThemeToggle } from "@/components/ThemeToggle";
+
 // Google icon SVG component
 const GoogleIcon = () => (
   <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -232,6 +234,11 @@ export default function LoginPage() {
     >
       {/* Left Panel - Brand Visual (60% on desktop, hidden on mobile) */}
       <div className="hidden lg:block lg:w-[60%] relative overflow-hidden">
+
+        {/* Theme Toggle - top right of left panel */}
+        <div className="absolute top-4 right-4 z-20">
+          <ThemeToggle compact />
+        </div>
         <GridBackground className="h-full">
           {/* Glowing Orbs for ambient effect */}
           <GlowingOrb
@@ -248,7 +255,7 @@ export default function LoginPage() {
           <GlowingOrb
             className="top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
             size={500}
-            color="rgba(201, 168, 76, 0.5)"
+            color="var(--accent)"
             delay={1}
           />
 
@@ -412,6 +419,11 @@ export default function LoginPage() {
           <GlowingOrb className="top-10 right-10" size={200} />
         </div>
 
+        {/* Mobile-only Theme Toggle */}
+        <div className="lg:hidden absolute top-4 right-4 z-20">
+          <ThemeToggle compact />
+        </div>
+
         {/* Glass Card */}
         <motion.div
           className="relative z-10 w-full max-w-md"
@@ -419,7 +431,7 @@ export default function LoginPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
-          <Spotlight className="rounded-2xl" fill="rgba(201, 168, 76, 0.1)" />
+          <Spotlight className="rounded-2xl" fill="var(--accent-subtle)" />
           
           <div className="relative rounded-2xl border border-[var(--border-default)] bg-[var(--glass-bg)] backdrop-blur-xl p-6 sm:p-8 shadow-2xl overflow-hidden group">
             {/* Mobile Logo */}

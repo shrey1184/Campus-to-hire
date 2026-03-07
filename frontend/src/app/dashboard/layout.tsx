@@ -17,6 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import Logo from "@/components/Logo";
+import { ThemeToggle, AccentPicker } from "@/components/ThemeToggle";
 
 const NAV_ITEMS = [
   {
@@ -90,15 +91,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background page-base">
       {/* Desktop Sidebar */}
-      <aside className="sticky top-0 left-0 z-40 hidden h-screen w-64 shrink-0 border-r border-[var(--border-default)] bg-[var(--glass-bg)] backdrop-blur-xl lg:flex lg:flex-col noise-texture">
-        <div className="flex h-full flex-col">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden h-screen w-64 shrink-0 overflow-hidden overscroll-none border-r border-[var(--border-default)] bg-[var(--glass-bg)] backdrop-blur-xl lg:flex lg:flex-col noise-texture">
+        <div className="flex h-full flex-col overflow-hidden">
           {/* Logo */}
-          <div className="flex h-16 items-center border-b border-[var(--border-default)] px-6">
+          <div className="flex h-16 shrink-0 items-center border-b border-[var(--border-default)] px-6">
             <Logo size="md" />
           </div>
 
           {/* Nav */}
-          <nav className="flex-1 space-y-1 px-3 py-4">
+          <nav className="shrink-0 space-y-1 px-3 py-4">
             {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -141,10 +142,21 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             })}
           </nav>
 
+          {/* Spacer pushes footer to bottom */}
+          <div className="flex-1" />
+
           {/* User */}
-          <div className="border-t border-[var(--border-default)] p-4">
-            <div className="mb-4">
-              <LanguageSwitcher />
+          <div className="border-t border-[var(--border-default)] p-4">            {/* Accent colour dots */}
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Accent</span>
+              <AccentPicker />
+            </div>
+
+            {/* Language + Theme toggle on same row */}            <div className="mb-3 flex items-center gap-2">
+              <div className="flex-1">
+                <LanguageSwitcher />
+              </div>
+              <ThemeToggle compact />
             </div>
             <div className="mb-3 flex items-center gap-3">
               <motion.div
@@ -179,6 +191,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <Logo size="sm" />
         </Link>
         <div className="flex items-center gap-2">
+          <AccentPicker />
+          <ThemeToggle compact />
           <LanguageSwitcher compact />
           <motion.div
             className="relative group cursor-pointer"
@@ -221,7 +235,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </nav>
 
       {/* Main content */}
-      <main className="flex-1 min-w-0 pt-14 pb-16 lg:pt-0 lg:pb-0">
+      <main className="flex-1 min-w-0 pt-14 pb-16 lg:pl-64 lg:pt-0 lg:pb-0">
         <div className="w-full px-4 py-5 sm:px-6 sm:py-7 lg:px-6 lg:py-8 xl:px-8">
           {children}
         </div>
