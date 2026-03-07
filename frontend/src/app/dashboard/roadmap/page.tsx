@@ -572,15 +572,21 @@ export default function RoadmapPage() {
                                                               href={resource.url}
                                                               target="_blank"
                                                               rel="noopener noreferrer"
-                                                              className="link-glow rounded-full border border-white/10 px-2.5 py-1 text-xs"
+                                                              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition ${getResourceBadgeClass(resource.difficulty)}`}
                                                             >
+                                                              <span className="font-semibold uppercase tracking-[0.1em]">
+                                                                {getResourceBadgeLabel(resource)}
+                                                              </span>
                                                               {resource.title}
                                                             </a>
                                                           ) : (
                                                             <span
                                                               key={`${dayKey}-${taskIndex}-${resourceIndex}`}
-                                                              className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-[var(--text-secondary)]"
+                                                              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${getResourceBadgeClass(resource.difficulty)}`}
                                                             >
+                                                              <span className="font-semibold uppercase tracking-[0.1em]">
+                                                                {getResourceBadgeLabel(resource)}
+                                                              </span>
                                                               {resource.title}
                                                             </span>
                                                           ),
@@ -668,4 +674,30 @@ function SnapshotRow({ label, value }: { label: string; value: string }) {
       </span>
     </div>
   );
+}
+
+function getResourceBadgeLabel(resource: {
+  resource_type?: string;
+  platform?: string;
+  type?: string;
+}) {
+  const base = resource.resource_type || resource.type || "resource";
+  if (base === "leetcode") return "LC";
+  if (base === "youtube") return "YT";
+  if (base === "practice") return "PR";
+  if (resource.platform) return resource.platform.slice(0, 2).toUpperCase();
+  return "RS";
+}
+
+function getResourceBadgeClass(difficulty?: string) {
+  if (difficulty === "easy") {
+    return "border-emerald-500/25 bg-emerald-500/10 text-emerald-100";
+  }
+  if (difficulty === "medium") {
+    return "border-amber-500/25 bg-amber-500/10 text-amber-100";
+  }
+  if (difficulty === "hard") {
+    return "border-rose-500/25 bg-rose-500/10 text-rose-100";
+  }
+  return "border-white/10 bg-white/[0.03] text-[var(--text-secondary)]";
 }

@@ -336,6 +336,31 @@ class ResourcesResponse(BaseModel):
     resources: list[ResourceItem]
 
 
+class ResourceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    title: str
+    topic: str
+    sub_topic: Optional[str] = None
+    difficulty: str
+    resource_type: str
+    url: str
+    youtube_url: Optional[str] = None
+    platform: str
+    estimated_minutes: Optional[int] = None
+    tags: Optional[list[str]] = None
+    created_at: datetime
+
+
+class ResourceFilter(BaseModel):
+    topic: Optional[str] = None
+    difficulty: Optional[str] = None
+    resource_type: Optional[str] = None
+    platform: Optional[str] = None
+    limit: int = 10
+
+
 class TranslateRoadmapRequest(BaseModel):
     roadmap_id: str
     target_language: str

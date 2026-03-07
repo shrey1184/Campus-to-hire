@@ -90,7 +90,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background page-base">
       {/* Desktop Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-[var(--border-default)] bg-[var(--glass-bg)] backdrop-blur-xl lg:block noise-texture">
+      <aside className="sticky top-0 left-0 z-40 hidden h-screen w-64 shrink-0 border-r border-[var(--border-default)] bg-[var(--glass-bg)] backdrop-blur-xl lg:flex lg:flex-col noise-texture">
         <div className="flex h-full flex-col">
           {/* Logo */}
           <div className="flex h-16 items-center border-b border-[var(--border-default)] px-6">
@@ -221,7 +221,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </nav>
 
       {/* Main content */}
-      <main className="flex-1 pt-14 pb-16 lg:ml-64 lg:pt-0 lg:pb-0">
+      <main className="flex-1 min-w-0 pt-14 pb-16 lg:pt-0 lg:pb-0">
         <div className="w-full px-4 py-5 sm:px-6 sm:py-7 lg:px-6 lg:py-8 xl:px-8">
           {children}
         </div>

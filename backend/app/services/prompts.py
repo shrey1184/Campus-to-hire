@@ -376,7 +376,7 @@ Curated Resource URLs (use ONLY real URLs from this list):
 - English: https://www.youtube.com/playlist?list=PLsyeobzWxl7pMn-3KWQXRG-vLqJEd4XbS"""
 
 
-def get_roadmap_plan_prompt(user_profile: dict) -> str:
+def get_roadmap_plan_prompt(user_profile: dict, resource_context: str | None = None) -> str:
     """Generate a roadmap skeleton (themes for all weeks) + detailed Week 1."""
     college_tier = user_profile.get("college_tier", "tier2")
     is_cs = user_profile.get("is_cs_background", False)
@@ -417,6 +417,10 @@ def get_roadmap_plan_prompt(user_profile: dict) -> str:
     lang_hint = ""
     if preferred_language == "hi":
         lang_hint = "Prefer Hindi resources (CodeWithHarry, Apna College) where possible."
+
+    resource_section = ""
+    if resource_context:
+        resource_section = f"\nRESOURCE CATALOG:\n{resource_context}\nUse ONLY these URLs when assigning resources."
 
     return f"""Create a {total_weeks}-week placement roadmap PLAN + detailed Week 1.
 
@@ -468,10 +472,16 @@ RULES:
 3. Each task: 1 resource with real URL from system prompt list
 4. Task IDs: w1d{{day}}t{{num}} pattern
 5. Types: learn, practice, review, or project only
-6. Last 2 weeks in plan should include company-specific prep ({companies_str})"""
+6. Last 2 weeks in plan should include company-specific prep ({companies_str})""" + resource_section
 
 
-def get_roadmap_week_prompt(user_profile: dict, week_number: int, plan: list, previous_themes: list[str] | None = None) -> str:
+def get_roadmap_week_prompt(
+    user_profile: dict,
+    week_number: int,
+    plan: list,
+    previous_themes: list[str] | None = None,
+    resource_context: str | None = None,
+) -> str:
     """Generate a single week's detailed content given the overall plan context."""
     college_tier = user_profile.get("college_tier", "tier2")
     is_cs = user_profile.get("is_cs_background", False)
@@ -506,6 +516,10 @@ def get_roadmap_week_prompt(user_profile: dict, week_number: int, plan: list, pr
     lang_hint = ""
     if preferred_language == "hi":
         lang_hint = "Prefer Hindi resources (CodeWithHarry, Apna College) where possible."
+
+    resource_section = ""
+    if resource_context:
+        resource_section = f"\nRESOURCE CATALOG:\n{resource_context}\nUse ONLY these URLs for this week."
 
     return f"""Generate DETAILED content for Week {week_number} of a placement roadmap.
 
@@ -549,7 +563,7 @@ RULES:
 3. Task IDs: w{week_number}d{{day}}t{{num}} pattern
 4. Types: learn, practice, review, or project only
 5. Match the theme "{theme}" and focus "{focus}" precisely
-6. Progressive difficulty within the week (day 1 easier, last day harder)"""
+6. Progressive difficulty within the week (day 1 easier, last day harder)""" + resource_section
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

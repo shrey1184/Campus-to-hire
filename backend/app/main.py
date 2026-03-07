@@ -69,6 +69,7 @@ app.include_router(jd.router)
 app.include_router(translate.router)
 app.include_router(progress.router)
 app.include_router(content.router)
+app.include_router(content.resources_router)
 app.include_router(dashboard.router)
 
 

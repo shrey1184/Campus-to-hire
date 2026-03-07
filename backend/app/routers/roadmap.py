@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, attributes
 
 from app.database import get_db
 from app.auth import get_current_user
-from app.models import User, Roadmap
+from app.models import Resource, Roadmap, User
 from app.schemas import RoadmapResponse, RoadmapListResponse, GenerateWeekRequest
 from app.services.bedrock import bedrock_service
 from app.services.prompts import (
@@ -29,6 +29,37 @@ TASK_TYPE_ALIASES = {
     "code": "practice",
 }
 
+TOPIC_KEYWORDS = {
+    "Arrays": ["array", "hash", "prefix sum", "two pointer", "sliding window"],
+    "Strings": ["string", "substring", "anagram", "palindrome"],
+    "Linked List": ["linked list"],
+    "Stacks & Queues": ["stack", "queue", "monotonic"],
+    "Binary Trees": ["tree", "binary tree", "traversal"],
+    "BST": ["bst", "binary search tree"],
+    "Graphs": ["graph", "bfs", "dfs", "topological", "union find"],
+    "Dynamic Programming": ["dynamic programming", "dp", "memoization"],
+    "Greedy": ["greedy", "interval"],
+    "Backtracking": ["backtracking", "permutation", "combination"],
+    "Binary Search": ["binary search", "search"],
+    "Heap": ["heap", "priority queue"],
+    "SQL": ["sql", "database query"],
+    "DBMS": ["dbms", "normalization", "acid", "join"],
+    "Operating Systems": ["operating system", "os", "process", "thread"],
+    "Computer Networks": ["network", "cn", "tcp", "http"],
+    "OOP": ["oop", "object oriented", "polymorphism", "encapsulation"],
+    "Aptitude": ["aptitude", "reasoning", "quantitative"],
+    "Projects": ["project", "portfolio"],
+}
+
+ROLE_TOPIC_HINTS = {
+    "backend": ["SQL", "DBMS", "Operating Systems", "Computer Networks", "OOP"],
+    "fullstack": ["Projects", "SQL", "OOP"],
+    "frontend": ["Projects"],
+    "sde": ["Arrays", "Strings", "Binary Trees", "Graphs", "Dynamic Programming"],
+    "qa": ["Aptitude", "SQL", "OOP"],
+    "data": ["SQL", "Arrays"],
+}
+
 
 def _to_positive_int(value: object, default: int) -> int:
     try:
@@ -38,6 +69,104 @@ def _to_positive_int(value: object, default: int) -> int:
     except (TypeError, ValueError):
         pass
     return default
+
+
+def _infer_resource_topics(*texts: str | None) -> list[str]:
+    combined = " ".join(text for text in texts if text).lower()
+    topics: list[str] = []
+
+    for topic, keywords in TOPIC_KEYWORDS.items():
+        if any(keyword in combined for keyword in keywords):
+            topics.append(topic)
+
+    for role_key, role_topics in ROLE_TOPIC_HINTS.items():
+        if role_key in combined:
+            for topic in role_topics:
+                if topic not in topics:
+                    topics.append(topic)
+
+    return topics[:4]
+
+
+def _fetch_resource_context(
+    db: Session,
+    *texts: str | None,
+    preferred_language: str = "en",
+    limit: int = 10,
+) -> str | None:
+    topics = _infer_resource_topics(*texts)
+    query = db.query(Resource)
+
+    if topics:
+        query = query.filter(Resource.topic.in_(topics))
+
+    resources = query.order_by(Resource.topic.asc(), Resource.title.asc()).all()
+    if not resources:
+        return None
+
+    preferred_platforms = {"neetcode", "takeuforward", "leetcode", "youtube"}
+    if preferred_language == "hi":
+        preferred_platforms = {"codewithharry", "apna college", "leetcode", "youtube"}
+
+    def sort_key(resource: Resource):
+        platform_rank = 0 if resource.platform.lower() in preferred_platforms else 1
+        type_rank = 0 if resource.resource_type in {"leetcode", "practice"} else 1
+        return (
+            platform_rank,
+            type_rank,
+            resource.topic.lower(),
+            resource.title.lower(),
+        )
+
+    selected = sorted(resources, key=sort_key)[:limit]
+    return "\n".join(
+        f"- [{resource.topic} | {resource.difficulty} | {resource.resource_type}] {resource.title} -> {resource.url}"
+        for resource in selected
+    )
+
+
+def _enrich_roadmap_content(content: dict, db: Session) -> dict:
+    urls: set[str] = set()
+    for week in content.get("weeks", []):
+        for day in week.get("days", []) or []:
+            for task in day.get("tasks", []) or []:
+                for resource in task.get("resources", []) or []:
+                    if isinstance(resource, dict) and resource.get("url"):
+                        urls.add(str(resource["url"]))
+
+    if not urls:
+        return content
+
+    resource_map = {
+        resource.url: resource
+        for resource in db.query(Resource).filter(Resource.url.in_(list(urls))).all()
+    }
+
+    enriched = copy.deepcopy(content)
+    for week in enriched.get("weeks", []):
+        for day in week.get("days", []) or []:
+            for task in day.get("tasks", []) or []:
+                next_resources = []
+                for resource in task.get("resources", []) or []:
+                    if not isinstance(resource, dict) or not resource.get("url"):
+                        next_resources.append(resource)
+                        continue
+
+                    matched = resource_map.get(str(resource["url"]))
+                    if not matched:
+                        next_resources.append(resource)
+                        continue
+
+                    next_resource = dict(resource)
+                    next_resource["difficulty"] = matched.difficulty
+                    next_resource["platform"] = matched.platform
+                    next_resource["resource_type"] = matched.resource_type
+                    if matched.youtube_url:
+                        next_resource["youtube_url"] = matched.youtube_url
+                    next_resources.append(next_resource)
+                task["resources"] = next_resources
+
+    return enriched
 
 
 def _normalize_task(task: object, week_num: int, day_num: int, task_num: int) -> dict:
@@ -220,7 +349,16 @@ def generate_roadmap(
     # Step 1: Generate the plan skeleton + detailed Week 1
     raw_response = bedrock_service.invoke_model(
         ROADMAP_SYSTEM_PROMPT,
-        get_roadmap_plan_prompt(user_profile),
+        get_roadmap_plan_prompt(
+            user_profile,
+            _fetch_resource_context(
+                db,
+                current_user.target_role,
+                ", ".join(current_user.target_companies or []),
+                preferred_language=getattr(current_user, "preferred_language", "en"),
+                limit=12,
+            ),
+        ),
         max_tokens=4096,
         fallback_type="roadmap",
     )
@@ -267,6 +405,7 @@ def generate_roadmap(
         "fallback": bool(parsed_json.get("fallback", False)),
         "message": str(parsed_json.get("message") or ""),
     }
+    normalized_content = _enrich_roadmap_content(normalized_content, db)
 
     # Deactivate existing active roadmaps
     db.query(Roadmap).filter(
@@ -307,6 +446,10 @@ def generate_week(
     plan = content.get("plan", [])
     total_weeks = content.get("total_weeks", len(weeks))
     week_number = body.week_number
+    week_plan = next(
+        (entry for entry in plan if isinstance(entry, dict) and entry.get("week") == week_number),
+        {},
+    )
 
     if week_number < 1 or week_number > total_weeks:
         raise HTTPException(status_code=400, detail=f"Week number must be between 1 and {total_weeks}")
@@ -337,7 +480,20 @@ def generate_week(
 
     raw_response = bedrock_service.invoke_model(
         ROADMAP_WEEK_SYSTEM_PROMPT,
-        get_roadmap_week_prompt(user_profile, week_number, plan, previous_themes or None),
+        get_roadmap_week_prompt(
+            user_profile,
+            week_number,
+            plan,
+            previous_themes or None,
+            _fetch_resource_context(
+                db,
+                str(week_plan.get("theme") or ""),
+                str(week_plan.get("focus") or ""),
+                current_user.target_role,
+                preferred_language=getattr(current_user, "preferred_language", "en"),
+                limit=10,
+            ),
+        ),
         max_tokens=4096,
         fallback_type="roadmap_week",
     )
@@ -361,6 +517,7 @@ def generate_week(
     normalized_week.pop("pending", None)
     updated_weeks[week_index] = normalized_week
     updated_content["weeks"] = updated_weeks
+    updated_content = _enrich_roadmap_content(updated_content, db)
 
     roadmap.content = updated_content
     attributes.flag_modified(roadmap, "content")

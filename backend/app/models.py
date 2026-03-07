@@ -70,3 +70,20 @@ class Interview(Base):
     score = Column(Integer, nullable=True)
     feedback = Column(String, nullable=True)
     created_at = Column(DateTime, default=func.now())
+
+
+class Resource(Base):
+    __tablename__ = "resources"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    title = Column(String, nullable=False)
+    topic = Column(String, nullable=False)
+    sub_topic = Column(String, nullable=True)
+    difficulty = Column(String, nullable=False)
+    resource_type = Column(String, nullable=False)
+    url = Column(String, nullable=False, unique=True)
+    youtube_url = Column(String, nullable=True)
+    platform = Column(String, nullable=False)
+    estimated_minutes = Column(Integer, nullable=True)
+    tags = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=func.now())
