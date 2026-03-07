@@ -710,40 +710,47 @@ def get_interview_followup_prompt(role: str, company: str | None, last_answer: s
     candidate_msgs = [m for m in context if m.get('role') == 'user']
     exchange_count = len(candidate_msgs)
     
-    # Determine interview phase based on exchange count
+    # Determine interview phase based on exchange count (8 total exchanges)
     if exchange_count <= 2:
-        phase_instruction = """PHASE: Early Interview (Warm-up)
+        phase_instruction = """PHASE: Early Interview (Warm-up) — Exchanges 1-2
 - Ask foundational questions to gauge their level
 - Be friendly and build confidence
 - If their intro was good, start with an easy-medium technical question
 - For service companies: Start with basic programming/OOP concepts
 - For product companies: Start with an easy DSA problem"""
     elif exchange_count <= 4:
-        phase_instruction = """PHASE: Mid Interview (Core Assessment)
+        phase_instruction = """PHASE: Mid Interview (Core Assessment) — Exchanges 3-4
 - This is where the real evaluation happens
 - Ask questions that directly test skills needed for the role
 - For coding roles: Give a specific problem (Two Sum, reverse a string, find duplicates, etc.)
 - For service companies: DBMS (normalization, ACID), OS (process vs thread), CN basics
 - For product companies: Medium DSA problem, optimize previous solution, system design basics
 - Ask them to code or pseudocode if appropriate"""
-    else:
-        phase_instruction = """PHASE: Late Interview (Deep Dive & Wrap-up)
+    elif exchange_count <= 6:
+        phase_instruction = """PHASE: Advanced Assessment (Deep Dive) — Exchanges 5-6
 - Ask harder follow-ups or a new challenging question
 - Test edge case thinking and optimization ability
+- For coding roles: Ask about time/space complexity, can they do better?
+- For service companies: Scenario-based questions, debugging, troubleshooting
+- For product companies: System design, scalability discussion, design patterns
+- Ask them to walk through their thought process"""
+    else:
+        phase_instruction = """PHASE: Final Round (Wrap-up) — Exchanges 7-8
 - Ask about projects, real-world application of concepts
-- For product companies: Ask about time/space complexity, can they do better?
+- Behavioral questions: teamwork, challenges faced, learning approach
 - Allow them to ask questions about the role/company
-- This should feel like the interview is wrapping up naturally"""
+- This should feel like the interview is wrapping up naturally
+- If they've been strong, give them a final challenging question to shine"""
 
     return f"""Continue the mock interview for {role} at {company_str}.
 
-**Conversation so far (last 4 messages):**
-{"\n".join(f"{'Interviewer' if m['role'] == 'assistant' else 'Candidate'}: {m['content']}" for m in context[-4:])}
+**Conversation so far (last 6 messages):**
+{"\n".join(f"{'Interviewer' if m['role'] == 'assistant' else 'Candidate'}: {m['content']}" for m in context[-6:])}
 
 **Candidate's latest answer:**
 {last_answer}
 
-**Exchange #{exchange_count + 1} of ~5**
+**Exchange #{exchange_count + 1} of ~8**
 
 {phase_instruction}
 

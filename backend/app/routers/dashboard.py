@@ -72,7 +72,7 @@ def _get_recent_activities(user: User, db: Session, limit: int = 10) -> list[Act
                 id=f"interview_{interview.id}",
                 type="interview_completed",
                 title=f"Completed Mock Interview: {interview.role}",
-                description=f"Scored {interview.score}/10 in {interview.company or 'General'} interview",
+                description=f"Scored {interview.score}/100 in {interview.company or 'General'} interview",
                 timestamp=interview.created_at,
                 metadata={
                     "role": interview.role,
@@ -575,7 +575,7 @@ def _calculate_complete_dashboard_stats(user: User, db: Session) -> CompleteDash
         # Calculate daily score (weighted average of task completion and interview scores)
         task_score = min(100, day_tasks_completed * 20)
         interview_score = (
-            sum(i.score * 10 for i in day_interviews) / len(day_interviews)
+            sum(i.score for i in day_interviews) / len(day_interviews)
             if day_interviews else 0
         )
         

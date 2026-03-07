@@ -136,6 +136,20 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface InterviewEvaluation {
+  score?: number;
+  feedback?: string;
+  strengths?: string[];
+  improvements?: string[];
+  technical_score?: number;
+  communication_score?: number;
+  problem_solving_score?: number;
+  readiness_level?: string;
+  next_steps?: string[];
+  recommended_resources?: { title: string; url: string; reason: string }[];
+  company_fit?: string;
+}
+
 // ── JD Analysis ──────────────────────────────────────────────────────────────
 
 export interface JDAnalysis {

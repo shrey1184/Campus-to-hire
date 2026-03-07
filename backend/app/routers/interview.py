@@ -60,14 +60,37 @@ def _evaluate_interview(interview: Interview) -> tuple[int | None, str | None]:
 
     try:
         data = json.loads(raw)
-        raw_score = data.get("score")
-        score = int(raw_score) if raw_score is not None else None
+
+        # Compute score from sub-scores when available (weighted average).
+        tech = data.get("technical_score")
+        comm = data.get("communication_score")
+        ps = data.get("problem_solving_score")
+
+        if tech is not None and comm is not None and ps is not None:
+            # Weighted: technical 40%, problem-solving 35%, communication 25%
+            weighted = int(tech) * 0.40 + int(ps) * 0.35 + int(comm) * 0.25
+            score = round(weighted * 10)          # 1-10 → 0-100
+        else:
+            raw_score = data.get("score")
+            score = int(raw_score) if raw_score is not None else None
+            if score is not None:
+                if score <= 10:
+                    score = score * 10
+
         if score is not None:
             score = max(0, min(100, score))
-        feedback = data.get("feedback")
+
+        # Store the full evaluation JSON so the frontend can render it.
+        feedback = json.dumps(data)
     except (ValueError, TypeError, json.JSONDecodeError, AttributeError):
         score = None
         feedback = raw
+
+    # Guarantee a score so the interview is always marked as finished.
+    if score is None:
+        score = 50
+        if not feedback:
+            feedback = "Interview evaluation could not be fully processed. A default score has been assigned."
 
     return score, feedback
 
@@ -109,7 +132,7 @@ def respond_to_interview(
     """
     Send a candidate answer to an ongoing interview.
 
-    After 5 Q&A pairs (10 messages total) the interview is automatically
+    After 8 Q&A pairs (16 messages total) the interview is automatically
     evaluated and the session is closed with a score and feedback.
     """
     interview = (
@@ -129,8 +152,8 @@ def respond_to_interview(
     messages.append({"role": "user", "content": body.message})
     interview.messages = messages
 
-    # Auto-evaluate when 5 Q&A pairs (10 messages) have been exchanged.
-    if len(messages) >= 10:
+    # Auto-evaluate when 8 Q&A pairs (16 messages) have been exchanged.
+    if len(messages) >= 16:
         setattr(interview, "preferred_language", current_user.preferred_language)
         score, feedback = _evaluate_interview(interview)
         interview.score = score
@@ -183,6 +206,9 @@ def end_interview(
 
     if interview is None:
         raise HTTPException(status_code=404, detail="Interview not found")
+
+    if interview.score is not None:
+        return interview
 
     setattr(interview, "preferred_language", current_user.preferred_language)
     score, feedback = _evaluate_interview(interview)
