@@ -235,8 +235,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </nav>
 
       {/* Main content */}
-      <main className="flex-1 min-w-0 pt-14 pb-16 lg:pl-64 lg:pt-0 lg:pb-0">
-        <div className="w-full px-4 py-5 sm:px-6 sm:py-7 lg:px-6 lg:py-8 xl:px-8">
+      <main className="flex-1 w-full min-w-0 pt-14 pb-16 lg:pl-64 lg:pt-0 lg:pb-0">
+        <div className="w-full px-4 py-5 sm:px-6 sm:py-7 lg:p-8">
           {children}
         </div>
       </main>

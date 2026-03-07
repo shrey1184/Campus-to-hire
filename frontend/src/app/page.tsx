@@ -20,7 +20,8 @@ import { BlurFade } from "@/components/magic/BlurFade";
 import { Marquee } from "@/components/magic/Marquee";
 import { ShimmerButton } from "@/components/magic/ShimmerButton";
 
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ThemeToggle, AccentPicker } from "@/components/ThemeToggle";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 import {
   GraduationCap,
@@ -187,11 +188,12 @@ function MagneticButton({
     return (
       <motion.div
         className={className}
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.98 }}
         transition={{ type: "spring", stiffness: 400, damping: 17 }}
       >
-        <Link href={href}>{children}</Link>
+        <Link href={href} style={{ display: 'inherit', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>{children}</Link>
       </motion.div>
     );
   }
@@ -199,38 +201,13 @@ function MagneticButton({
   return (
     <motion.button
       className={className}
+      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 400, damping: 17 }}
     >
       {children}
     </motion.button>
-  );
-}
-
-function OrbitNumber({ num, delay = 0 }: { num: string; delay?: number }) {
-  return (
-    <motion.div
-      initial={{ scale: 0, rotate: -180 }}
-      whileInView={{ scale: 1, rotate: 0 }}
-      viewport={{ once: true }}
-      transition={{ 
-        type: "spring", 
-        stiffness: 200, 
-        damping: 15, 
-        delay 
-      }}
-      className="relative"
-    >
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-        className="absolute inset-0 rounded-full border border-dashed border-[var(--accent)]/30"
-      />
-      <span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] text-lg font-bold text-[var(--text-inverse)]">
-        {num}
-      </span>
-    </motion.div>
   );
 }
 
@@ -242,6 +219,27 @@ function AnimatedLine({ progress }: { progress: MotionValue<string> }) {
         style={{ width: progress }}
       />
     </div>
+  );
+}
+
+function OrbitNumber({ num, delay }: { num: string | number; delay: number }) {
+  return (
+    <motion.div
+      whileInView={{ scale: 1, rotate: 0 }}
+      initial={{ scale: 0.8, rotate: -10 }}
+      viewport={{ once: true }}
+      transition={{ type: "spring", stiffness: 200, damping: 15, delay }}
+      className="relative flex h-16 w-16 shrink-0 items-center justify-center"
+    >
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        className="absolute inset-0 rounded-full border border-dashed border-[var(--accent)]/30"
+      />
+      <span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] text-lg font-bold text-[var(--text-inverse)]">
+        {num}
+      </span>
+    </motion.div>
   );
 }
 
@@ -260,34 +258,46 @@ function HeroSection({ user, loading }: { user: UserProfile | null; loading: boo
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6 }}
-        className="fixed top-0 left-0 right-0 z-50 border-b border-[var(--border-default)]/40 bg-[var(--bg-base)]/80 backdrop-blur-xl"
+        className="fixed top-0 left-0 right-0 z-50 py-4 transition-all duration-300"
       >
-        <div className="container-main flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Logo size="md" />
-          <div className="flex items-center gap-3">
-            <ThemeToggle compact />
-            {!loading && (
-              user ? (
-                <MagneticButton href="/dashboard">
-                  <ShimmerButton>Dashboard</ShimmerButton>
-                </MagneticButton>
-              ) : (
-                <>
-                  <MagneticButton href="/login" className="hidden sm:inline-flex">
-                    <motion.span
-                      className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium border border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors"
-                      whileHover={{ scale: 1.02 }}
-                    >
-                      <LogIn className="h-3.5 w-3.5" />
-                      Login
-                    </motion.span>
+        <div className="container-main max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex h-14 items-center justify-between rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)]/70 px-4 shadow-sm backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-[var(--bg-surface)]/40">
+            <div className="flex items-center gap-6">
+              <Logo size="sm" />
+            </div>
+
+            <div className="flex items-center gap-2.5 sm:gap-4">
+              <div className="hidden items-center gap-2 md:flex border-r border-[var(--border-default)] pr-4 mr-1">
+                <AccentPicker />
+                <ThemeToggle compact />
+                <LanguageSwitcher compact />
+              </div>
+              <div className="flex items-center gap-2 md:hidden">
+                 <AccentPicker />
+              </div>
+              
+              {!loading && (
+                user ? (
+                  <MagneticButton href="/dashboard">
+                    <ShimmerButton className="px-5 py-2 text-sm">Dashboard</ShimmerButton>
                   </MagneticButton>
-                  <MagneticButton href="/login">
-                    <ShimmerButton>Get Started</ShimmerButton>
-                  </MagneticButton>
-                </>
-              )
-            )}
+                ) : (
+                  <>
+                    <MagneticButton href="/login" className="hidden sm:inline-flex">
+                      <motion.span
+                        className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        Log in
+                      </motion.span>
+                    </MagneticButton>
+                    <MagneticButton href="/login">
+                      <ShimmerButton className="px-5 py-2 text-sm">Get Started</ShimmerButton>
+                    </MagneticButton>
+                  </>
+                )
+              )}
+            </div>
           </div>
         </div>
       </motion.nav>

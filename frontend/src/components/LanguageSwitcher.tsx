@@ -31,7 +31,7 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
