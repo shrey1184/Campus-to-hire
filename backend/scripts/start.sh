@@ -110,7 +110,6 @@ main() {
         --proxy-headers \
         --forwarded-allow-ips '*' \
         --access-log \
-        --error-log \
         --log-level info
 }
 
