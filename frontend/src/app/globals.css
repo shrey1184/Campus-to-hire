@@ -659,9 +659,8 @@ html.ch-wallpaper body > div {
   z-index: 1;
 }
 
-/* Dark theme — surfaces use --surface-alpha for transparency */
-html.ch-wallpaper,
-html.ch-wallpaper [data-theme="dark"] {
+/* Dark theme — compound selector: only when html itself has data-theme="dark" */
+html.ch-wallpaper[data-theme="dark"] {
   --bg-base:     rgba(8,  8,  8,  var(--surface-alpha, 0.85));
   --bg-surface:  rgba(17, 17, 17, var(--surface-alpha, 0.85));
   --bg-elevated: rgba(26, 26, 26, var(--surface-alpha, 0.85));
@@ -670,8 +669,8 @@ html.ch-wallpaper [data-theme="dark"] {
   --input-bg:    rgba(13, 13, 13, var(--surface-alpha, 0.85));
 }
 
-/* Light theme */
-html.ch-wallpaper [data-theme="light"] {
+/* Light theme — compound selector: only when html itself has data-theme="light" */
+html.ch-wallpaper[data-theme="light"] {
   --bg-base:     rgba(248, 248, 246, var(--surface-alpha, 0.85));
   --bg-surface:  rgba(255, 255, 255, var(--surface-alpha, 0.85));
   --bg-elevated: rgba(240, 238, 235, var(--surface-alpha, 0.85));
