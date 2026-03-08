@@ -31,8 +31,10 @@ export const MovingBorder = ({
 }: MovingBorderProps) => {
   const shouldReduceMotion = useReducedMotion();
 
+  // Conic gradient: mostly transparent with a small bright accent spot
+  // so only a short travelling line is visible along the border edge
   const gradientStyle = {
-    background: `conic-gradient(from 0deg, ${colors.join(", ")})`,
+    background: `conic-gradient(from 0deg, transparent 0deg, transparent 300deg, ${colors[0]} 330deg, ${colors[1] ?? colors[0]} 345deg, transparent 360deg)`,
   };
 
   return (
@@ -43,32 +45,33 @@ export const MovingBorder = ({
       )}
       style={{ padding: borderWidth }}
     >
-      {/* Animated rotating gradient */}
+      {/*
+        Oversized rotating element — positioned at the centre of the container
+        but sized to 200% so it always extends beyond all edges.
+        overflow:hidden on the parent clips everything except the thin strip
+        at the container edge, producing a moving-line rather than a spinning rect.
+      */}
       <motion.div
-        className={cn(
-          "absolute inset-0 z-0 rounded-2xl",
-          borderClassName
-        )}
-        style={gradientStyle}
-        animate={
-          shouldReduceMotion
-            ? {}
-            : {
-                rotate: [0, 360],
-              }
-        }
+        className={cn("absolute z-0", borderClassName)}
+        style={{
+          ...gradientStyle,
+          // Centre the element and make it square & oversized
+          width: "200%",
+          height: "200%",
+          top: "50%",
+          left: "50%",
+          translateX: "-50%",
+          translateY: "-50%",
+        }}
+        animate={shouldReduceMotion ? {} : { rotate: [0, 360] }}
         transition={
           shouldReduceMotion
             ? {}
-            : {
-                duration: duration / 1000,
-                repeat: Infinity,
-                ease: "linear",
-              }
+            : { duration: duration / 1000, repeat: Infinity, ease: "linear" }
         }
       />
 
-      {/* Inner content container */}
+      {/* Inner content — covers the centre, leaving only the border strip visible */}
       <div
         className={cn(
           "relative z-10 h-full w-full rounded-2xl bg-card",
