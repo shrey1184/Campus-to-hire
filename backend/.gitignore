@@ -9,6 +9,9 @@ env/
 .env.local
 .env.*.local
 
+# DB credentials
+DB_Info.txt
+
 # Python cache
 __pycache__/
 *.py[cod]
@@ -60,3 +63,5 @@ logs/
 # Uploads / temp files
 uploads/
 tmp/
+
+.txt
