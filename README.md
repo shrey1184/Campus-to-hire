@@ -6,6 +6,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.133-009688?style=for-the-badge&logo=fastapi)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql&logoColor=white)
 ![AWS Bedrock](https://img.shields.io/badge/AWS-Bedrock-FF9900?style=for-the-badge&logo=amazon-aws)
+![AWS Polly](https://img.shields.io/badge/AWS-Polly-FF9900?style=for-the-badge&logo=amazon-aws)
 ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-4-38BDF8?style=for-the-badge&logo=tailwind-css)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
@@ -22,14 +23,16 @@
 
 | Feature | Description |
 |---------|-------------|
-| **🗺️ AI Roadmap Generation** | Personalized weekly roadmaps based on student profile, skills, and target role — powered by Amazon Bedrock |
-| **📅 Daily Action Plans** | Bite-sized daily tasks with time estimates, balanced across theory, coding practice, and interview prep |
-| **💬 Mock Interviews** | AI-powered interview simulation with role-specific questions, evaluation, and detailed feedback |
+| **🗺️ AI Roadmap Generation** | Personalized weekly roadmaps based on student profile, skills, and target role — powered by Amazon Bedrock; enriched with curated resource context |
+| **📅 Daily Action Plans** | Bite-sized daily tasks with time estimates, balanced across theory, coding practice, and interview prep; synced with roadmap progress and supports advance-to-next-day |
+| **💬 Mock Interviews** | AI-powered interview simulation with role-specific questions, structured evaluation, and detailed feedback |
+| **🎙️ Voice Interviews** | Text-to-speech interview questions via Amazon Polly with voice input support; language-aware voices for all supported Indian languages |
 | **📄 JD Skill-Gap Analysis** | Paste any job description and instantly see how your skills stack up against requirements |
-| **🌐 Multi-Language Support** | Content in Hindi, Tamil, Telugu, Bengali, and Marathi with technical terms preserved in English |
-| **📊 Progress Dashboard** | Track your journey with skill levels, streak counters, completion stats, and readiness scores |
+| **🌐 Real-Time Language Switching** | In-app language switcher (English, Hindi, Tamil, Telugu, Bengali, Marathi) with translation caching and profile preference sync |
+| **📊 Gamified Progress Dashboard** | XP system, level progression, activity heatmap, skill radar, learning streaks, and weekly summaries |
 | **🔐 Auth (Email + Google OAuth)** | Secure JWT-based authentication with email/password and Google OAuth 2.0 login |
-| **🎨 Cyberpunk UI** | Dark theme with neon pink & purple accents, glowing panels, and smooth animations |
+| **🎨 Adaptive Theming** | Light/dark mode toggle, 5 accent color schemes (Gold, Blue, Green, Red, Violet), custom background image with opacity and glass-blur controls |
+| **✨ Animated UI Components** | Aceternity UI components (Aurora Background, Bento Grid, Moving Border, Spotlight, Text Generate Effect), Magic UI, and Framer Motion animations |
 
 ---
 
@@ -38,23 +41,26 @@
 ### Frontend
 - **Framework:** Next.js 16 (App Router, React 19)
 - **Language:** TypeScript 5
-- **Styling:** Tailwind CSS 4 with custom cyberpunk theme
-- **UI:** Lucide Icons, Framer Motion, Recharts, React Markdown
+- **Styling:** Tailwind CSS 4 with adaptive light/dark theme and CSS variable–driven accent system
+- **UI:** Lucide Icons, Framer Motion, Recharts, React Markdown, Aceternity UI, Magic UI
+- **Theming:** `ThemeProvider` with light/dark toggle, 5 accent palettes, background image + glass controls
+- **i18n:** `LanguageProvider` with real-time switching, translation caching, and Amazon Translate integration
 - **Auth:** JWT tokens with context-based auth state
 
 ### Backend
 - **Framework:** FastAPI (Python 3.12)
 - **Database:** PostgreSQL with SQLAlchemy ORM
-- **Migrations:** Alembic
+- **Migrations:** Alembic (resources table, target_role, focus_area, Google ID)
 - **AI/ML:** Amazon Bedrock (Claude) for roadmap generation, interview simulation, JD analysis
+- **Text-to-Speech:** Amazon Polly for voice interview questions (neural engine, language-aware voices)
 - **Translation:** Amazon Translate for multi-language support
 - **Auth:** JWT (PyJWT) + bcrypt password hashing + Google OAuth 2.0
 - **HTTP Client:** HTTPX for async external API calls
 
 ### Infrastructure
-- **Containerization:** Docker & Docker Compose
+- **Containerization:** Docker & Docker Compose (dev + production `docker-compose.prod.yml`)
 - **Reverse Proxy:** Nginx
-- **Cloud:** AWS (Bedrock, Translate, S3)
+- **Cloud:** AWS (Bedrock, Translate, Polly, S3)
 - **Region:** ap-south-1 (Mumbai) for low-latency India access
 
 ---
@@ -173,23 +179,37 @@ Campus-for-hire/
 │   ├── tsconfig.json
 │   └── src/
 │       ├── app/
-│       │   ├── globals.css      # Cyberpunk theme & design system
-│       │   ├── layout.tsx       # Root layout with auth provider
+│       │   ├── globals.css      # Adaptive light/dark theme & CSS variable design system
+│       │   ├── layout.tsx       # Root layout with auth, theme & language providers
 │       │   ├── page.tsx         # Landing page
 │       │   ├── login/           # Auth (email + Google OAuth)
 │       │   ├── onboarding/      # 4-step profile setup
 │       │   ├── dashboard/       # Protected dashboard
-│       │   │   ├── page.tsx     # Dashboard overview
-│       │   │   ├── roadmap/     # AI-generated roadmap viewer
-│       │   │   ├── today/       # Daily task tracker
-│       │   │   ├── interview/   # Mock interview chat
+│       │   │   ├── layout.tsx   # Sidebar with ThemeToggle, AccentPicker, BackgroundImagePicker, LanguageSwitcher
+│       │   │   ├── page.tsx     # Dashboard overview (XP, levels, heatmap, skill radar)
+│       │   │   ├── roadmap/     # AI-generated roadmap viewer (resource links & task tracking)
+│       │   │   ├── today/       # Daily task tracker (roadmap-synced, advance-to-next-day)
+│       │   │   ├── interview/   # Mock interview chat + voice playback
 │       │   │   └── jd-analyze/  # JD skill-gap analyzer
 │       │   └── auth/callback/   # OAuth callback handler
+│       ├── components/
+│       │   ├── ThemeToggle.tsx      # ThemeToggle, AccentPicker, BackgroundImagePicker
+│       │   ├── LanguageSwitcher.tsx # Real-time language switcher dropdown
+│       │   ├── Logo.tsx
+│       │   ├── HeroUIProviderWrapper.tsx
+│       │   ├── aceternity/          # AuroraBackground, BentoGrid, GridBackground, MovingBorder, Spotlight, TextGenerateEffect
+│       │   ├── magic/               # Magic UI components
+│       │   ├── skeletons/           # Loading skeleton components
+│       │   └── ui/                  # shadcn/ui primitives (DropdownMenu, Form, Input, Progress, Tabs, …)
 │       ├── lib/
-│       │   ├── api.ts           # API client (fetch wrappers)
-│       │   ├── auth-context.tsx # React auth context & provider
-│       │   ├── auth.ts          # Auth utilities
-│       │   └── utils.ts         # General utilities
+│       │   ├── api.ts               # API client (fetch wrappers)
+│       │   ├── auth-context.tsx     # React auth context & provider
+│       │   ├── auth.ts              # Auth utilities
+│       │   ├── theme-context.tsx    # ThemeProvider (light/dark, accent, background image, glass)
+│       │   ├── language-context.tsx # LanguageProvider (language, t(), translateText())
+│       │   ├── translations.ts      # Static translation strings
+│       │   ├── interview-voice.ts   # Amazon Polly voice client
+│       │   └── utils.ts             # General utilities
 │       └── types/
 │           └── index.ts         # TypeScript types & constants
 │
@@ -212,9 +232,17 @@ Campus-for-hire/
 ### Profile & Progress
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `PUT`  | `/api/profile` | Update user profile |
+| `PUT`  | `/api/profile` | Update user profile (incl. `preferred_language`) |
 | `GET`  | `/api/profile/progress` | Get progress statistics |
 | `GET`  | `/api/profile/stats` | Get dashboard stats |
+
+### Progress Tracking
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET`  | `/api/progress/overview` | Full progress overview (XP, streak, skill radar) |
+| `GET`  | `/api/progress/roadmap` | Roadmap completion % and per-week breakdown |
+| `GET`  | `/api/progress/streak` | Learning streak (current & longest) |
+| `GET`  | `/api/progress/weekly` | Weekly summary report |
 
 ### Roadmap
 | Method | Endpoint | Description |
@@ -235,6 +263,11 @@ Campus-for-hire/
 | `POST` | `/api/interview/{id}/respond` | Send interview response |
 | `POST` | `/api/interview/{id}/end` | End & score interview |
 
+### Voice (Amazon Polly)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/interview/voice/synthesize` | Convert interview text to speech (language-aware neural voice) |
+
 ### JD Analysis
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -251,8 +284,8 @@ Campus-for-hire/
 
 ```
 ┌─────────────────────────┐
-│   Next.js 16 Frontend   │  ← Cyberpunk UI (Black/Pink/Purple)
-│   (React 19 + Tailwind) │
+│   Next.js 16 Frontend   │  ← Adaptive UI (Light/Dark + 5 Accent Themes)
+│   (React 19 + Tailwind) │    ThemeProvider · LanguageProvider · Auth
 └───────────┬─────────────┘
             │ HTTPS
 ┌───────────▼─────────────┐
@@ -260,10 +293,11 @@ Campus-for-hire/
 │    (Python 3.12)         │
 ├──────────┬──────────────┤
 │          │              │
-│  ┌───────▼──────┐ ┌────▼────────────┐
-│  │ PostgreSQL   │ │ Amazon Bedrock  │  ← AI (Claude)
-│  │ (SQLAlchemy) │ │ Amazon Translate│  ← Multi-language
-│  └──────────────┘ └─────────────────┘
+│  ┌───────▼──────┐ ┌────▼────────────────────┐
+│  │ PostgreSQL   │ │ Amazon Bedrock (Claude)  │  ← AI roadmap, interviews, JD
+│  │ (SQLAlchemy) │ │ Amazon Translate          │  ← Multi-language
+│  └──────────────┘ │ Amazon Polly              │  ← Voice synthesis
+│                   └──────────────────────────┘
 ```
 
 ### Key Design Decisions
@@ -273,18 +307,28 @@ Campus-for-hire/
 - **Mobile-responsive**: PWA-ready design optimized for smartphone access
 - **Offline-friendly**: Minimal bundle size, lazy loading, 2G/3G optimized
 - **Multi-tenant**: User isolation via JWT claims and row-level DB filtering
+- **Theme-agnostic UI**: All colors driven by CSS custom properties; no hardcoded palette
+- **Voice-enabled**: Amazon Polly neural TTS integrated directly into the interview flow
 
 ---
 
-## 🎨 UI Theme
+## 🎨 UI Theming
 
-The UI uses a **Cyberpunk** aesthetic with:
+The UI supports **Light** and **Dark** modes with **5 accent colour schemes**:
 
-- **Background**: Deep black (`#0a0a0f`) with subtle purple grid overlay
-- **Primary**: Hot pink (`#ff2d9b`) — buttons, accents, active states
-- **Secondary**: Electric purple (`#bf5fff`) — hover effects, borders, glows
-- **Panels**: Frosted glass with pink/purple neon edge lighting
-- **Animations**: Shimmer effects on buttons, pulse animations on loading states
+| Accent | Dark mode | Light mode |
+|--------|-----------|------------|
+| Gold *(default)* | `#c9a84c` | `#9a7b2e` |
+| Blue   | `#3b82f6` | `#1d4ed8` |
+| Green  | `#22c55e` | `#15803d` |
+| Red    | `#ef4444` | `#b91c1c` |
+| Violet | `#8b5cf6` | `#6d28d9` |
+
+Additional customisation options available per-session:
+- **Background image** — upload any image with adjustable opacity
+- **Glass effect** — control surface transparency (solid → frosted glass)
+
+All preferences (theme, accent) are persisted to `localStorage` with system preference detection on first visit.
 
 ---
 
@@ -301,7 +345,22 @@ The UI uses a **Cyberpunk** aesthetic with:
 
 ---
 
-## 📄 License
+## � Recent Changes
+
+### March 2026
+- **🎨 Theme system overhaul** — full light/dark mode, 5 accent colour schemes (Gold, Blue, Green, Red, Violet), background image picker with opacity & glass-blur sliders; all preferences persisted to `localStorage` with system-preference detection
+- **🌐 Real-time language switching** — `LanguageSwitcher` dropdown in dashboard sidebar; language preference synced to user profile via API; translation results cached per session
+- **🎙️ Voice interviews** — Amazon Polly neural TTS integrated at `/api/interview/voice/synthesize`; language-aware voice selection (Joanna for English, Kajal for Indian languages); voice input support in interview UI
+- **📊 Gamified dashboard** — XP calculation, level display, activity heatmap, skill radar chart, learning streak tracking, and weekly summary via new `/api/progress/*` endpoints
+- **🗺️ Roadmap enrichment** — `target_role` field added to roadmap responses; AI prompts enriched with curated resource context; per-task resource links surfaced in the roadmap viewer
+- **📅 Daily plan sync** — `focus_area` field added to daily plan responses; task completion now bidirectionally synced with the roadmap; advance-to-next-day action implemented
+- **✨ Animated UI library** — Aceternity UI components added (AuroraBackground, BentoGrid, GridBackground, MovingBorder with gradient animation, Spotlight, TextGenerateEffect); Magic UI components; Framer Motion animations throughout
+- **🗄️ Database migrations** — new `resources` table (seeded via `scripts/seed_resources.py`); `target_role` & `focus_area` columns on roadmap/daily-plan tables; `google_id` column on users table
+- **🐳 Production Docker** — `docker-compose.prod.yml` added for production deployments
+
+---
+
+## �📄 License
 
 This project is for educational and portfolio purposes. All rights reserved.
 

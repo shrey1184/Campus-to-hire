@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useTheme } from "@/lib/theme-context";
-import type { AccentColor, Theme } from "@/lib/theme-context";
 
 interface LogoProps {
   /** Size variant */
@@ -20,44 +18,33 @@ const HEIGHTS: Record<NonNullable<LogoProps["size"]>, number> = {
 };
 
 /**
- * Hue-rotate offset (degrees) from the sepia base (~35°) to each accent color.
- * sepia(0.7) + saturate(3) + hue-rotate(X) tints the logo without flattening
- * the internal grayscale detail, so letter shapes and icon depth are preserved.
+ * Uses a luminance-mask SVG so background-color: var(--accent) fills the logo
+ * shape directly — zero filter math, pixel-perfect colour for every accent.
  */
-const ACCENT_HUE: Record<AccentColor, number> = {
-  gold:   5,
-  blue:   175,
-  green:  100,
-  red:    330,
-  violet: 215,
-};
-
-function getFilter(theme: Theme, accent: AccentColor): string {
-  const hue = ACCENT_HUE[accent];
-  // Tint preserves relative luminance so counters / shadows stay distinct
-  const tint = `sepia(0.7) saturate(3) hue-rotate(${hue}deg)`;
-  return theme === "dark"
-    ? `invert(1) ${tint} brightness(1.1)`
-    : `${tint} brightness(0.9)`;
-}
-
 function LogoImage({ size = "md", className = "" }: Pick<LogoProps, "size" | "className">) {
-  const { theme, accent } = useTheme();
   const height = HEIGHTS[size];
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src="/campus-for-hire.svg"
-      alt="Campus for Hire"
+    <div
+      role="img"
+      aria-label="Campus for Hire"
+      className={className}
       style={{
         height: `${height}px`,
-        width: "auto",
-        filter: getFilter(theme, accent),
-        transition: "filter 0.35s ease",
+        width: `${height}px`,
+        backgroundColor: "var(--accent)",
+        WebkitMaskImage: "url(/logo-mask.svg)",
+        WebkitMaskSize: "contain",
+        WebkitMaskRepeat: "no-repeat",
+        WebkitMaskPosition: "center",
+        maskImage: "url(/logo-mask.svg)",
+        maskSize: "contain",
+        maskRepeat: "no-repeat",
+        maskPosition: "center",
+        transition: "background-color 0.35s ease",
         display: "block",
+        flexShrink: 0,
       }}
-      className={className}
     />
   );
 }
