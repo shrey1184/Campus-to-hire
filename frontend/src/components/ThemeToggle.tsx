@@ -1,7 +1,8 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Moon, Sun } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Image, Moon, Sun, X } from "lucide-react";
 import { ACCENT_DOT_COLOR, ACCENT_PALETTE, type AccentColor, useTheme } from "@/lib/theme-context";
 
 // ── Accent colour labels for aria ─────────────────────────────────────────
@@ -105,3 +106,204 @@ export function ThemeToggle({ compact = false, className = "" }: ThemeToggleProp
   );
 }
 
+// ── BackgroundImagePicker ─────────────────────────────────────────────────
+interface BackgroundImagePickerProps {
+  className?: string;
+  /** Which direction the popover opens. Default: "up" (for sidebars/footers). Use "down" for top navbars. */
+  popoverDirection?: "up" | "down";
+}
+
+export function BackgroundImagePicker({
+  className = "",
+  popoverDirection = "up",
+}: BackgroundImagePickerProps) {
+  const { bgImage, bgOpacity, glassOpacity, setBgImage, setBgOpacity, setGlassOpacity } = useTheme();
+  const [isOpen, setIsOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close popover when clicking outside
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  // When a file is chosen, create an object URL and set it as background
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setBgImage(url);
+      setIsOpen(true);
+    }
+    // Reset so the same file can be re-selected
+    e.target.value = "";
+  };
+
+  const handleButtonClick = () => {
+    if (bgImage) {
+      // Toggle the popover (slider panel) if image already set
+      setIsOpen((prev) => !prev);
+    } else {
+      // No image yet — open file picker directly
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleRemove = () => {
+    setBgImage(null);
+    setIsOpen(false);
+  };
+
+  const popoverPositionClass =
+    popoverDirection === "down"
+      ? "top-full mt-2 origin-top"
+      : "bottom-full mb-2 origin-bottom";
+
+  return (
+    <div ref={containerRef} className={`relative ${className}`}>
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {/* Trigger button — same style as ThemeToggle compact */}
+      <motion.button
+        type="button"
+        onClick={handleButtonClick}
+        whileTap={{ scale: 0.92 }}
+        aria-label="Set background image"
+        title="Background image"
+        className={`
+          relative flex h-9 w-9 items-center justify-center rounded-xl border
+          border-[var(--border-default)] bg-[var(--bg-elevated)]
+          text-sm transition
+          hover:border-[var(--accent)] hover:bg-[var(--accent-subtle)]
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]
+        `}
+      >
+        <Image className="h-4 w-4 text-[var(--accent)]" />
+        {/* Dot indicator when a background image is active */}
+        {bgImage && (
+          <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-[var(--accent)] ring-2 ring-[var(--bg-elevated)]" />
+        )}
+      </motion.button>
+
+      {/* Popover panel — shown when isOpen and bgImage exists */}
+      <AnimatePresence>
+        {isOpen && bgImage && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: popoverDirection === "down" ? -8 : 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: popoverDirection === "down" ? -8 : 8 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className={`absolute right-0 z-50 w-64 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4 shadow-2xl backdrop-blur-xl ${popoverPositionClass}`}
+          >
+            {/* Header */}
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                Background
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="rounded-md p-0.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                aria-label="Close"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* Image preview thumbnail */}
+            <div className="mb-4 h-28 w-full overflow-hidden rounded-xl bg-[var(--bg-overlay)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={bgImage}
+                alt="Background preview"
+                className="h-full w-full object-cover"
+              />
+            </div>
+
+            {/* Image opacity slider */}
+            <div className="mb-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-medium text-[var(--text-secondary)]">Image opacity</span>
+                <span className="font-mono text-xs text-[var(--text-muted)]">
+                  {Math.round(bgOpacity * 100)}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={bgOpacity}
+                onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
+                style={{ accentColor: "var(--accent)" }}
+                className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[var(--bg-overlay)]"
+                aria-label="Background opacity"
+              />
+              <div className="mt-1 flex justify-between text-[10px] text-[var(--text-muted)]">
+                <span>0%</span>
+                <span>100%</span>
+              </div>
+            </div>
+
+            {/* Glass slider — controls surface transparency (lower surface-alpha = more glass) */}
+            <div className="mb-4">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-medium text-[var(--text-secondary)]">Glass</span>
+                <span className="font-mono text-xs text-[var(--text-muted)]">
+                  {Math.round((1 - glassOpacity) * 100)}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={1 - glassOpacity}
+                onChange={(e) => setGlassOpacity(1 - parseFloat(e.target.value))}
+                style={{ accentColor: "var(--accent)" }}
+                className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[var(--bg-overlay)]"
+                aria-label="Glass transparency"
+              />
+              <div className="mt-1 flex justify-between text-[10px] text-[var(--text-muted)]">
+                <span>Solid</span>
+                <span>Glass</span>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-1 rounded-lg border border-[var(--border-default)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              >
+                Change
+              </button>
+              <button
+                type="button"
+                onClick={handleRemove}
+                className="flex-1 rounded-lg border border-[var(--border-default)] px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:border-red-400 hover:bg-red-400/10"
+              >
+                Remove
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

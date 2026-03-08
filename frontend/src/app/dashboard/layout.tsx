@@ -17,7 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import Logo from "@/components/Logo";
-import { ThemeToggle, AccentPicker } from "@/components/ThemeToggle";
+import { ThemeToggle, AccentPicker, BackgroundImagePicker } from "@/components/ThemeToggle";
 
 const NAV_ITEMS = [
   {
@@ -146,10 +146,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <div className="flex-1" />
 
           {/* User */}
-          <div className="border-t border-[var(--border-default)] p-4">            {/* Accent colour dots */}
+          <div className="border-t border-[var(--border-default)] p-4">            {/* Accent colour dots + background image picker */}
             <div className="mb-3 flex items-center justify-between">
               <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Accent</span>
-              <AccentPicker />
+              <div className="flex items-center gap-2">
+                <AccentPicker />
+                <div className="h-4 w-px bg-[var(--border-default)]" />
+                <BackgroundImagePicker popoverDirection="up" />
+              </div>
             </div>
 
             {/* Language + Theme toggle on same row */}            <div className="mb-3 flex items-center gap-2">
@@ -193,6 +197,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-2">
           <AccentPicker />
           <ThemeToggle compact />
+          <BackgroundImagePicker popoverDirection="down" />
           <LanguageSwitcher compact />
           <motion.div
             className="relative group cursor-pointer"

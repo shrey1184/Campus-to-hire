@@ -20,7 +20,7 @@ import { BlurFade } from "@/components/magic/BlurFade";
 import { Marquee } from "@/components/magic/Marquee";
 import { ShimmerButton } from "@/components/magic/ShimmerButton";
 
-import { ThemeToggle, AccentPicker } from "@/components/ThemeToggle";
+import { ThemeToggle, AccentPicker, BackgroundImagePicker } from "@/components/ThemeToggle";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 import {
@@ -270,6 +270,7 @@ function HeroSection({ user, loading }: { user: UserProfile | null; loading: boo
               <div className="hidden items-center gap-2 md:flex border-r border-[var(--border-default)] pr-4 mr-1">
                 <AccentPicker />
                 <ThemeToggle compact />
+                <BackgroundImagePicker popoverDirection="down" />
                 <LanguageSwitcher compact />
               </div>
               <div className="flex items-center gap-2 md:hidden">

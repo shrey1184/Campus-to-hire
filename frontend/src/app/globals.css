@@ -643,3 +643,39 @@ body::before {
 html {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
+
+/* ─── Custom Wallpaper Background ───────────────────────────────
+   #ch-wallpaper-el is a real div injected into document.body.
+   It sits at z-index:0 (above body's normal-flow background, which
+   is painted in the block-level step, BELOW positioned elements).
+   App content is pushed to z-index:1 via body > div rule.
+   Surface CSS vars become semi-transparent (controlled by
+   --surface-alpha, set in JS) so the image bleeds through panels.
+──────────────────────────────────────────────────────────────── */
+
+/* App root div sits above the wallpaper element */
+html.ch-wallpaper body > div {
+  position: relative;
+  z-index: 1;
+}
+
+/* Dark theme — surfaces use --surface-alpha for transparency */
+html.ch-wallpaper,
+html.ch-wallpaper [data-theme="dark"] {
+  --bg-base:     rgba(8,  8,  8,  var(--surface-alpha, 0.85));
+  --bg-surface:  rgba(17, 17, 17, var(--surface-alpha, 0.85));
+  --bg-elevated: rgba(26, 26, 26, var(--surface-alpha, 0.85));
+  --bg-overlay:  rgba(34, 34, 34, var(--surface-alpha, 0.85));
+  --glass-bg:    rgba(17, 17, 17, var(--surface-alpha, 0.85));
+  --input-bg:    rgba(13, 13, 13, var(--surface-alpha, 0.85));
+}
+
+/* Light theme */
+html.ch-wallpaper [data-theme="light"] {
+  --bg-base:     rgba(248, 248, 246, var(--surface-alpha, 0.85));
+  --bg-surface:  rgba(255, 255, 255, var(--surface-alpha, 0.85));
+  --bg-elevated: rgba(240, 238, 235, var(--surface-alpha, 0.85));
+  --bg-overlay:  rgba(230, 228, 224, var(--surface-alpha, 0.85));
+  --glass-bg:    rgba(255, 255, 255, var(--surface-alpha, 0.85));
+  --input-bg:    rgba(255, 255, 255, var(--surface-alpha, 0.85));
+}

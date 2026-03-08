@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -61,11 +62,17 @@ export const ACCENT_DOT_COLOR: Record<AccentColor, string> = {
 
 // ── Context ────────────────────────────────────────────────────────────────
 interface ThemeContextValue {
-  theme:        Theme;
-  accent:       AccentColor;
-  toggleTheme:  () => void;
-  setTheme:     (t: Theme) => void;
-  setAccent:    (a: AccentColor) => void;
+  theme:           Theme;
+  accent:          AccentColor;
+  toggleTheme:     () => void;
+  setTheme:        (t: Theme) => void;
+  setAccent:       (a: AccentColor) => void;
+  bgImage:         string | null;
+  bgOpacity:       number;
+  glassOpacity:    number;
+  setBgImage:      (url: string | null) => void;
+  setBgOpacity:    (opacity: number) => void;
+  setGlassOpacity: (opacity: number) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -86,9 +93,16 @@ function applyAccentVars(accent: AccentColor, theme: Theme) {
 
 // ── Provider ───────────────────────────────────────────────────────────────
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme,  setThemeState]  = useState<Theme>("dark");
-  const [accent, setAccentState] = useState<AccentColor>("gold");
-  const [mounted, setMounted]    = useState(false);
+  const [theme,      setThemeState]  = useState<Theme>("dark");
+  const [accent,     setAccentState] = useState<AccentColor>("gold");
+  const [mounted,    setMounted]     = useState(false);
+  const [bgImage,      setBgImageState]      = useState<string | null>(null);
+  const [bgOpacity,    setBgOpacityState]    = useState<number>(0.5);
+  // glassOpacity = surface alpha: 1 = fully opaque panels, 0 = fully transparent (max glass)
+  const [glassOpacity, setGlassOpacityState] = useState<number>(0.85);
+
+  // Track previous object URL so we can revoke it on change
+  const prevBgImageRef = useRef<string | null>(null);
 
   // Restore preferences on mount
   useEffect(() => {
@@ -127,8 +141,73 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setAccent = useCallback((a: AccentColor) => setAccentState(a), []);
 
+  // Revoke old object URL to avoid memory leaks
+  const setBgImage = useCallback((url: string | null) => {
+    if (prevBgImageRef.current && prevBgImageRef.current.startsWith("blob:")) {
+      URL.revokeObjectURL(prevBgImageRef.current);
+    }
+    prevBgImageRef.current = url;
+    setBgImageState(url);
+  }, []);
+
+  const setBgOpacity = useCallback((opacity: number) => {
+    setBgOpacityState(Math.min(1, Math.max(0, opacity)));
+  }, []);
+
+  const setGlassOpacity = useCallback((opacity: number) => {
+    setGlassOpacityState(Math.min(1, Math.max(0, opacity)));
+  }, []);
+
+  // Inject a real div into document.body as the wallpaper layer.
+  // A real positioned div (z-index:0) is guaranteed to paint ABOVE body's
+  // normal-flow background (which is in the block-level painting step),
+  // avoiding the "body background propagates to canvas" issue that breaks
+  // html::before-based approaches.
+  useEffect(() => {
+    const root = document.documentElement;
+
+    let wallpaperEl = document.getElementById("ch-wallpaper-el") as HTMLDivElement | null;
+    if (!wallpaperEl) {
+      wallpaperEl = document.createElement("div");
+      wallpaperEl.id = "ch-wallpaper-el";
+      wallpaperEl.setAttribute("aria-hidden", "true");
+      document.body.appendChild(wallpaperEl);
+    }
+
+    if (bgImage) {
+      Object.assign(wallpaperEl.style, {
+        display:            "block",
+        position:           "fixed",
+        inset:              "0",
+        zIndex:             "0",
+        backgroundImage:    `url("${bgImage}")`,
+        backgroundSize:     "cover",
+        backgroundPosition: "center",
+        backgroundRepeat:   "no-repeat",
+        opacity:            String(bgOpacity),
+        pointerEvents:      "none",
+        transition:         "opacity 0.15s ease",
+      });
+      root.style.setProperty("--surface-alpha", String(glassOpacity));
+      root.classList.add("ch-wallpaper");
+    } else {
+      wallpaperEl.style.display = "none";
+      root.style.removeProperty("--surface-alpha");
+      root.classList.remove("ch-wallpaper");
+    }
+  }, [bgImage, bgOpacity, glassOpacity]);
+
+  // Clean up wallpaper div on unmount
+  useEffect(() => {
+    return () => {
+      document.getElementById("ch-wallpaper-el")?.remove();
+      document.documentElement.classList.remove("ch-wallpaper");
+      document.documentElement.style.removeProperty("--surface-alpha");
+    };
+  }, []);
+
   return (
-    <ThemeContext.Provider value={{ theme, accent, toggleTheme, setTheme, setAccent }}>
+    <ThemeContext.Provider value={{ theme, accent, toggleTheme, setTheme, setAccent, bgImage, bgOpacity, glassOpacity, setBgImage, setBgOpacity, setGlassOpacity }}>
       {children}
     </ThemeContext.Provider>
   );

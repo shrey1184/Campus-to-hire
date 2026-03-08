@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useTheme } from "@/lib/theme-context";
+import type { AccentColor, Theme } from "@/lib/theme-context";
 
 interface LogoProps {
   /** Size variant */
@@ -8,42 +12,53 @@ interface LogoProps {
   className?: string;
 }
 
-const sizes = {
-  sm: { svg: 20, text: "text-sm", gap: "gap-2" },
-  md: { svg: 26, text: "text-base", gap: "gap-2.5" },
-  lg: { svg: 32, text: "text-xl", gap: "gap-3" },
+/** Height in px for each size (the SVG viewBox is 1:1 so width = height) */
+const HEIGHTS: Record<NonNullable<LogoProps["size"]>, number> = {
+  sm: 28,
+  md: 40,
+  lg: 60,
 };
 
-function LogoMark({ svgSize }: { svgSize: number }) {
-  return (
-    <svg
-      width={svgSize}
-      height={svgSize}
-      viewBox="0 0 28 28"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      {/* Outer ring */}
-      <circle cx="14" cy="14" r="13" stroke="currentColor" strokeWidth="2.4" />
-      {/* Punch-out circle → creates the crescent / C shape */}
-      <circle cx="17" cy="14" r="9" fill="var(--bg-base)" />
-    </svg>
-  );
+/**
+ * Hue-rotate offset (degrees) from the sepia base (~35°) to each accent color.
+ * sepia(0.7) + saturate(3) + hue-rotate(X) tints the logo without flattening
+ * the internal grayscale detail, so letter shapes and icon depth are preserved.
+ */
+const ACCENT_HUE: Record<AccentColor, number> = {
+  gold:   5,
+  blue:   175,
+  green:  100,
+  red:    330,
+  violet: 215,
+};
+
+function getFilter(theme: Theme, accent: AccentColor): string {
+  const hue = ACCENT_HUE[accent];
+  // Tint preserves relative luminance so counters / shadows stay distinct
+  const tint = `sepia(0.7) saturate(3) hue-rotate(${hue}deg)`;
+  return theme === "dark"
+    ? `invert(1) ${tint} brightness(1.1)`
+    : `${tint} brightness(0.9)`;
 }
 
-function LogoInner({ size = "md", className = "" }: Pick<LogoProps, "size" | "className">) {
-  const { svg, text, gap } = sizes[size!];
+function LogoImage({ size = "md", className = "" }: Pick<LogoProps, "size" | "className">) {
+  const { theme, accent } = useTheme();
+  const height = HEIGHTS[size];
+
   return (
-    <span className={`inline-flex items-center ${gap} ${className}`}>
-      <LogoMark svgSize={svg} />
-      <span
-        className={`font-bold tracking-[0.13em] uppercase ${text}`}
-        style={{ fontFamily: "inherit" }}
-      >
-        C·H
-      </span>
-    </span>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/campus-for-hire.svg"
+      alt="Campus for Hire"
+      style={{
+        height: `${height}px`,
+        width: "auto",
+        filter: getFilter(theme, accent),
+        transition: "filter 0.35s ease",
+        display: "block",
+      }}
+      className={className}
+    />
   );
 }
 
@@ -51,9 +66,9 @@ export default function Logo({ size = "md", linked = false, className = "" }: Lo
   if (linked) {
     return (
       <Link href="/" className={`inline-flex items-center ${className}`}>
-        <LogoInner size={size} />
+        <LogoImage size={size} />
       </Link>
     );
   }
-  return <LogoInner size={size} className={className} />;
+  return <LogoImage size={size} className={className} />;
 }
