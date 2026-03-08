@@ -721,14 +721,6 @@ export default function InterviewPage() {
                   {novaSpeaking ? "AI Speaking" : "Listening"}
                 </span>
               )}
-              <button
-                type="button"
-                onClick={handleVoiceToggle}
-                className="btn-outline flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium"
-              >
-                {speaking || novaSpeaking ? <Volume2 className="h-3 w-3" /> : <VolumeX className="h-3 w-3" />}
-                Voice
-              </button>
             </div>
           ) : null}
           {!isFinished ? (
