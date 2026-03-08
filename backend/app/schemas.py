@@ -210,6 +210,7 @@ class TaskCompleteRequest(BaseModel):
 class InterviewStartRequest(BaseModel):
     role: str
     company: Optional[str] = None
+    voice_mode: Optional[bool] = False
 
 
 class InterviewRespondRequest(BaseModel):

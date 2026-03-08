@@ -1,4 +1,242 @@
+/**
+ * Interview voice utilities.
+ *
+ * Two modes:
+ * 1. Nova Sonic WebSocket — real-time bidirectional audio streaming (primary)
+ * 2. Legacy Polly TTS + browser SpeechRecognition (fallback)
+ */
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const WS_BASE = BASE_URL.replace(/^http/, "ws");
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+export interface VoiceRecorderController {
+  stop: () => void;
+}
+
+export interface NovaVoiceSession {
+  /** Send raw PCM audio bytes to Nova Sonic */
+  sendAudio: (data: ArrayBuffer) => void;
+  /** Signal end of user's speech turn */
+  endTurn: () => void;
+  /** End the interview entirely */
+  endInterview: () => void;
+  /** Close the session */
+  close: () => void;
+  /** Whether the WebSocket is connected */
+  readonly connected: boolean;
+}
+
+export interface NovaVoiceCallbacks {
+  /** Called when AI audio chunk arrives (PCM 24kHz 16-bit mono) */
+  onAudio: (pcmData: ArrayBuffer) => void;
+  /** Called when a transcript (user or assistant) arrives */
+  onTranscript: (role: "user" | "assistant", content: string) => void;
+  /** Called when an AI turn is complete */
+  onTurnEnd: () => void;
+  /** Called when evaluation arrives (interview complete) */
+  onEvaluation: (data: { score: number; feedback: string }) => void;
+  /** Called on error */
+  onError: (message: string) => void;
+  /** Called when connection closes */
+  onClose: () => void;
+}
+
+// ── Nova Sonic WebSocket Session ─────────────────────────────────────────────
+
+export function connectNovaVoice(
+  interviewId: string,
+  token: string,
+  callbacks: NovaVoiceCallbacks,
+): NovaVoiceSession {
+  const url = `${WS_BASE}/api/interview/voice/ws?token=${encodeURIComponent(token)}&interview_id=${encodeURIComponent(interviewId)}`;
+  const ws = new WebSocket(url);
+  ws.binaryType = "arraybuffer";
+
+  let isConnected = false;
+
+  ws.onopen = () => {
+    isConnected = true;
+  };
+
+  ws.onmessage = (event: MessageEvent) => {
+    if (event.data instanceof ArrayBuffer) {
+      // Binary frame = audio from Nova Sonic
+      callbacks.onAudio(event.data);
+    } else if (typeof event.data === "string") {
+      try {
+        const msg = JSON.parse(event.data);
+        switch (msg.type) {
+          case "transcript":
+            callbacks.onTranscript(msg.role, msg.content);
+            break;
+          case "turn_end":
+            callbacks.onTurnEnd();
+            break;
+          case "evaluation":
+            callbacks.onEvaluation(msg);
+            break;
+          case "error":
+            callbacks.onError(msg.message || "Voice session error");
+            break;
+          default:
+            break;
+        }
+      } catch {
+        // Ignore non-JSON text frames
+      }
+    }
+  };
+
+  ws.onerror = () => {
+    callbacks.onError("WebSocket connection error");
+  };
+
+  ws.onclose = () => {
+    isConnected = false;
+    callbacks.onClose();
+  };
+
+  return {
+    sendAudio(data: ArrayBuffer) {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(data);
+      }
+    },
+    endTurn() {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "end_turn" }));
+      }
+    },
+    endInterview() {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "end_interview" }));
+      }
+    },
+    close() {
+      isConnected = false;
+      ws.close();
+    },
+    get connected() {
+      return isConnected && ws.readyState === WebSocket.OPEN;
+    },
+  };
+}
+
+// ── Audio Capture (PCM 16kHz 16-bit mono via AudioWorklet) ──────────────────
+
+export interface AudioCaptureController {
+  stop: () => void;
+}
+
+export async function startAudioCapture(
+  onChunk: (pcmData: ArrayBuffer) => void,
+  onError: (msg: string) => void,
+): Promise<AudioCaptureController | null> {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1,
+        sampleRate: 16000,
+        echoCancellation: true,
+        noiseSuppression: true,
+      },
+    });
+
+    const audioCtx = new AudioContext({ sampleRate: 16000 });
+    const source = audioCtx.createMediaStreamSource(stream);
+
+    // Use ScriptProcessorNode (deprecated but widely supported)
+    // AudioWorklet would be better but requires a separate file
+    const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+
+    processor.onaudioprocess = (e: AudioProcessingEvent) => {
+      const float32 = e.inputBuffer.getChannelData(0);
+      // Convert float32 [-1, 1] to int16 PCM
+      const int16 = new Int16Array(float32.length);
+      for (let i = 0; i < float32.length; i++) {
+        const s = Math.max(-1, Math.min(1, float32[i]));
+        int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      }
+      onChunk(int16.buffer);
+    };
+
+    source.connect(processor);
+    // Connect through a silent gain node to keep ScriptProcessor active
+    // WITHOUT playing mic audio through speakers (causes terrible echo)
+    const silentGain = audioCtx.createGain();
+    silentGain.gain.value = 0;
+    processor.connect(silentGain);
+    silentGain.connect(audioCtx.destination);
+
+    return {
+      stop() {
+        processor.disconnect();
+        source.disconnect();
+        void audioCtx.close();
+        stream.getTracks().forEach((t) => t.stop());
+      },
+    };
+  } catch (err) {
+    onError(err instanceof Error ? err.message : "Microphone access denied");
+    return null;
+  }
+}
+
+// ── Audio Playback (PCM 24kHz 16-bit mono) ──────────────────────────────────
+
+export class AudioPlayer {
+  private ctx: AudioContext;
+  private nextStartTime = 0;
+  private playing = false;
+
+  constructor() {
+    this.ctx = new AudioContext({ sampleRate: 24000 });
+  }
+
+  /** Enqueue a PCM chunk for gapless playback */
+  enqueue(pcmData: ArrayBuffer): void {
+    const int16 = new Int16Array(pcmData);
+    const float32 = new Float32Array(int16.length);
+    for (let i = 0; i < int16.length; i++) {
+      float32[i] = int16[i] / (int16[i] < 0 ? 0x8000 : 0x7fff);
+    }
+    const buffer = this.ctx.createBuffer(1, float32.length, 24000);
+    buffer.getChannelData(0).set(float32);
+
+    // Schedule playback at the exact end of the previous chunk (no gaps)
+    const now = this.ctx.currentTime;
+    const startAt = Math.max(now, this.nextStartTime);
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this.ctx.destination);
+    source.start(startAt);
+    this.nextStartTime = startAt + buffer.duration;
+    this.playing = true;
+  }
+
+  /** Stop all playback and clear scheduled audio */
+  stop(): void {
+    this.playing = false;
+    this.nextStartTime = 0;
+    // Close and recreate context to cancel all scheduled sources
+    void this.ctx.close().catch(() => {});
+    this.ctx = new AudioContext({ sampleRate: 24000 });
+  }
+
+  /** Whether audio is currently playing */
+  get isPlaying(): boolean {
+    return this.playing && this.ctx.currentTime < this.nextStartTime;
+  }
+
+  destroy(): void {
+    this.playing = false;
+    void this.ctx.close().catch(() => {});
+  }
+}
+
+// ── Legacy Polly + Browser Speech API (backward compat) ─────────────────────
 
 const SPEECH_LANG_MAP: Record<string, string> = {
   en: "en-US",
@@ -40,10 +278,6 @@ interface SpeechRecognitionLike {
 }
 
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
-
-export interface VoiceRecorderController {
-  stop: () => void;
-}
 
 let currentAudio: HTMLAudioElement | null = null;
 
@@ -143,9 +377,7 @@ export async function speakInterviewText(
     }),
   });
 
-  if (!res.ok) {
-    return;
-  }
+  if (!res.ok) return;
 
   const data = (await res.json()) as VoiceSynthesizeResponse;
   const blob = base64ToBlob(data.audio_base64, data.content_type || "audio/mp3");

@@ -177,10 +177,10 @@ export const dailyPlanApi = {
 // ── Interview ────────────────────────────────────────────────────────────────
 
 export const interviewApi = {
-  start: (role: string, company?: string) =>
+  start: (role: string, company?: string, voiceMode?: boolean) =>
     request<Interview>("/api/interview/start", {
       method: "POST",
-      body: JSON.stringify({ role, company }),
+      body: JSON.stringify({ role, company: company || null, voice_mode: voiceMode || false }),
     }),
 
   respond: (interviewId: string, message: string) =>

@@ -9,7 +9,12 @@ import {
   speakInterviewText,
   startVoiceInput,
   stopVoicePlayback,
+  connectNovaVoice,
+  startAudioCapture,
+  AudioPlayer,
   type VoiceRecorderController,
+  type NovaVoiceSession,
+  type AudioCaptureController,
 } from "@/lib/interview-voice";
 import { fireConfetti } from "@/lib/confetti";
 import { useLanguage } from "@/lib/language-context";
@@ -77,6 +82,24 @@ function computeDisplayScore(interview: Interview): number {
     score = evaluation.score <= 10 ? evaluation.score * 10 : evaluation.score;
   }
   return Math.max(0, Math.min(100, score));
+}
+
+function mergeLiveTranscript(messages: ChatMessage[], role: ChatMessage["role"], content: string): ChatMessage[] {
+  const trimmed = content.trim();
+  if (!trimmed) return messages;
+
+  const nextMessages = [...messages];
+  const lastMessage = nextMessages[nextMessages.length - 1];
+  if (lastMessage && lastMessage.role === role) {
+    nextMessages[nextMessages.length - 1] = {
+      ...lastMessage,
+      content: `${lastMessage.content} ${trimmed}`.trim(),
+    };
+    return nextMessages;
+  }
+
+  nextMessages.push({ role, content: trimmed });
+  return nextMessages;
 }
 
 // ── Score ring helper ────────────────────────────────────────────────────────
@@ -321,6 +344,22 @@ export default function InterviewPage() {
   const recorderRef = useRef<VoiceRecorderController | null>(null);
   const lastSpokenAssistantIndexRef = useRef<number>(-1);
 
+  // Nova Sonic voice state
+  const novaSessionRef = useRef<NovaVoiceSession | null>(null);
+  const audioCaptureRef = useRef<AudioCaptureController | null>(null);
+  const audioPlayerRef = useRef<AudioPlayer | null>(null);
+  const [novaConnected, setNovaConnected] = useState(false);
+  const [novaSpeaking, setNovaSpeaking] = useState(false);
+  const latestAssistantIndex = interview?.messages
+    ? interview.messages.reduce((latest, message, index) => {
+        return message.role === "assistant" ? index : latest;
+      }, -1)
+    : -1;
+  const latestAssistantContent =
+    latestAssistantIndex >= 0
+      ? interview?.messages?.[latestAssistantIndex]?.content ?? ""
+      : "";
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [interview?.messages]);
@@ -339,35 +378,33 @@ export default function InterviewPage() {
   }, [interview]);
 
   useEffect(() => {
-    if (!voiceMode || !interview?.messages?.length) return;
+    // Never use legacy Polly playback for voice interviews.
+    // When the websocket reconnects or reload interrupts Nova Sonic,
+    // falling back to Polly causes unauthorized synthesize calls.
+    if (voiceMode || latestAssistantIndex < 0) return;
 
-    const assistantIndexes = interview.messages
-      .map((m, i) => (m.role === "assistant" ? i : -1))
-      .filter((i) => i >= 0);
-
-    if (!assistantIndexes.length) return;
-
-    const latestAssistantIndex = assistantIndexes[assistantIndexes.length - 1];
     if (latestAssistantIndex <= lastSpokenAssistantIndexRef.current) return;
 
-    const latestMessage = interview.messages[latestAssistantIndex];
-    if (!latestMessage?.content?.trim()) return;
+    if (!latestAssistantContent.trim()) return;
 
     lastSpokenAssistantIndexRef.current = latestAssistantIndex;
     setSpeaking(true);
-    void speakInterviewText(latestMessage.content, user?.preferred_language)
+    void speakInterviewText(latestAssistantContent, user?.preferred_language)
       .catch(() => {
         // Keep interview flow resilient even if voice playback fails.
       })
       .finally(() => {
         setSpeaking(false);
       });
-  }, [interview?.messages, user?.preferred_language, voiceMode]);
+  }, [latestAssistantIndex, latestAssistantContent, user?.preferred_language, voiceMode]);
 
   useEffect(() => {
     return () => {
       recorderRef.current?.stop();
       stopVoicePlayback();
+      novaSessionRef.current?.close();
+      audioCaptureRef.current?.stop();
+      audioPlayerRef.current?.destroy();
     };
   }, []);
 
@@ -375,13 +412,74 @@ export default function InterviewPage() {
     setStarting(true);
     setError("");
     try {
-      const iv = await interviewApi.start(selectedRole, selectedCompany || undefined);
+      const iv = await interviewApi.start(selectedRole, selectedCompany || undefined, voiceMode);
       setInterview(iv);
+      if (voiceMode) {
+        await startNovaVoiceSession(iv.id);
+      }
     } catch {
       setError(t("interview.errorStart"));
     } finally {
       setStarting(false);
     }
+  }
+
+  async function startNovaVoiceSession(interviewId: string) {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const player = new AudioPlayer();
+    audioPlayerRef.current = player;
+
+    const session = connectNovaVoice(interviewId, token, {
+      onAudio(pcmData) {
+        player.enqueue(pcmData);
+        setNovaSpeaking(true);
+      },
+      onTranscript(role, content) {
+        setInterview((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            messages: mergeLiveTranscript(prev.messages, role, content),
+          };
+        });
+      },
+      onTurnEnd() {
+        setNovaSpeaking(false);
+      },
+      onEvaluation(data) {
+        setInterview((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            score: data.score,
+            feedback: typeof data.feedback === "string" ? data.feedback : JSON.stringify(data.feedback),
+          };
+        });
+        // Stop audio capture when interview is evaluated
+        audioCaptureRef.current?.stop();
+        audioCaptureRef.current = null;
+      },
+      onError(msg) {
+        setError(msg);
+      },
+      onClose() {
+        setNovaConnected(false);
+        audioCaptureRef.current?.stop();
+        audioCaptureRef.current = null;
+      },
+    });
+
+    novaSessionRef.current = session;
+    setNovaConnected(true);
+
+    // Start capturing mic audio immediately
+    const capture = await startAudioCapture(
+      (pcmData) => session.sendAudio(pcmData),
+      (msg) => setError(`Mic error: ${msg}`),
+    );
+    audioCaptureRef.current = capture;
   }
 
   async function handleSend() {
@@ -404,8 +502,13 @@ export default function InterviewPage() {
     setEnding(true);
     setError("");
     try {
-      const updated = await interviewApi.end(interview.id);
-      setInterview(updated);
+      if (novaSessionRef.current?.connected) {
+        // Signal Nova Sonic to end and evaluate
+        novaSessionRef.current.endInterview();
+      } else {
+        const updated = await interviewApi.end(interview.id);
+        setInterview(updated);
+      }
     } catch {
       setError(t("interview.errorEnd"));
     } finally {
@@ -416,8 +519,16 @@ export default function InterviewPage() {
   function handleNewInterview() {
     recorderRef.current?.stop();
     recorderRef.current = null;
+    novaSessionRef.current?.close();
+    novaSessionRef.current = null;
+    audioCaptureRef.current?.stop();
+    audioCaptureRef.current = null;
+    audioPlayerRef.current?.destroy();
+    audioPlayerRef.current = null;
     setListening(false);
     setSpeaking(false);
+    setNovaConnected(false);
+    setNovaSpeaking(false);
     stopVoicePlayback();
     lastSpokenAssistantIndexRef.current = -1;
     setInterview(null);
@@ -545,7 +656,7 @@ export default function InterviewPage() {
               >
                 <span className="inline-flex items-center gap-2">
                   {voiceMode ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                  {voiceMode ? "Voice mode enabled" : "Enable voice mode (Polly + browser mic)"}
+                  {voiceMode ? "Voice mode enabled (Nova Sonic)" : "Enable voice mode"}
                 </span>
               </button>
             </BlurFade>
@@ -586,7 +697,9 @@ export default function InterviewPage() {
             {t("interview.messages", { count: interview.messages.length })}
             {isFinished
               ? ` | ${t("interview.score", { score: computeDisplayScore(interview) })}`
-              : ` | Question ${Math.min(Math.ceil(interview.messages.length / 2), 8)} of ~8`}
+              : voiceMode
+                ? " | Voice interview • 5 min max"
+                : ` | Question ${Math.min(Math.ceil(interview.messages.length / 2), 8)} of ~8`}
           </p>
           {!isFinished && (
             <div className="mt-1.5 h-1.5 w-40 overflow-hidden rounded-full bg-muted">
@@ -601,14 +714,22 @@ export default function InterviewPage() {
         </div>
         <div className="flex gap-2 self-start sm:self-auto">
           {voiceMode ? (
-            <button
-              type="button"
-              onClick={handleVoiceToggle}
-              className="btn-outline flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium"
-            >
-              {speaking ? <Volume2 className="h-3 w-3" /> : <VolumeX className="h-3 w-3" />}
-              {speaking ? "Voice On" : "Voice"}
-            </button>
+            <div className="flex items-center gap-2">
+              {novaConnected && (
+                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${novaSpeaking ? "bg-primary/20 text-primary animate-pulse" : "bg-emerald-500/20 text-emerald-500"}`}>
+                  {novaSpeaking ? <Volume2 className="h-2.5 w-2.5" /> : <Mic className="h-2.5 w-2.5" />}
+                  {novaSpeaking ? "AI Speaking" : "Listening"}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={handleVoiceToggle}
+                className="btn-outline flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium"
+              >
+                {speaking || novaSpeaking ? <Volume2 className="h-3 w-3" /> : <VolumeX className="h-3 w-3" />}
+                Voice
+              </button>
+            </div>
           ) : null}
           {!isFinished ? (
             <button
@@ -685,51 +806,69 @@ export default function InterviewPage() {
       </div>
 
       {!isFinished ? (
-        <motion.div
-          className="mt-4 flex gap-2 border-t border-border/40 pt-4"
-          animate={{
-            boxShadow: inputFocused
-              ? "0 0 0 1px var(--accent), 0 0 20px var(--accent-glow)"
-              : "0 0 0 0 transparent",
-          }}
-          transition={{ duration: 0.2 }}
-          style={{ borderRadius: "1rem", paddingInline: "0.25rem" }}
-        >
-          {voiceMode && isVoiceInputSupported() ? (
-            <button
-              type="button"
-              onClick={handleMicClick}
-              className={`btn-outline flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium ${
-                listening ? "border-primary text-primary" : ""
-              }`}
-              title={listening ? "Stop voice input" : "Start voice input"}
-            >
-              {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-            </button>
-          ) : null}
-          <input
-            type="text"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-            onFocus={() => setInputFocused(true)}
-            onBlur={() => setInputFocused(false)}
-            placeholder={t("interview.placeholder")}
-            disabled={loading}
-            className="input-dark flex-1 rounded-lg px-4 py-2.5 text-sm outline-none disabled:opacity-50"
-          />
-          <button
-            onClick={handleSend}
-            disabled={loading || !message.trim()}
-            className="btn-accent flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50"
+        novaConnected ? (
+          <div className="mt-4 flex items-center justify-center gap-3 border-t border-border/40 pt-4">
+            <div className={`flex items-center gap-2 rounded-full px-4 py-2.5 text-sm ${novaSpeaking ? "bg-primary/10 text-primary" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"}`}>
+              {novaSpeaking ? (
+                <>
+                  <Volume2 className="h-4 w-4 animate-pulse" />
+                  AI is speaking...
+                </>
+              ) : (
+                <>
+                  <Mic className="h-4 w-4 animate-pulse" />
+                  {interview.messages.length === 0 ? '🎙️ Say "Hello" to start your interview!' : 'Listening — speak your answer'}
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          <motion.div
+            className="mt-4 flex gap-2 border-t border-border/40 pt-4"
+            animate={{
+              boxShadow: inputFocused
+                ? "0 0 0 1px var(--accent), 0 0 20px var(--accent-glow)"
+                : "0 0 0 0 transparent",
+            }}
+            transition={{ duration: 0.2 }}
+            style={{ borderRadius: "1rem", paddingInline: "0.25rem" }}
           >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin spinner-glow" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </button>
-        </motion.div>
+            {voiceMode && isVoiceInputSupported() ? (
+              <button
+                type="button"
+                onClick={handleMicClick}
+                className={`btn-outline flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium ${
+                  listening ? "border-primary text-primary" : ""
+                }`}
+                title={listening ? "Stop voice input" : "Start voice input"}
+              >
+                {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </button>
+            ) : null}
+            <input
+              type="text"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              placeholder={t("interview.placeholder")}
+              disabled={loading}
+              className="input-dark flex-1 rounded-lg px-4 py-2.5 text-sm outline-none disabled:opacity-50"
+            />
+            <button
+              onClick={handleSend}
+              disabled={loading || !message.trim()}
+              className="btn-accent flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50"
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin spinner-glow" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </button>
+          </motion.div>
+        )
       ) : null}
     </motion.div>
   );

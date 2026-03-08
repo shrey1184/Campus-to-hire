@@ -27,6 +27,7 @@ class Settings(BaseSettings):
 
     # Amazon Bedrock
     BEDROCK_MODEL_ID: str = "amazon.nova-lite-v1:0"
+    NOVA_SONIC_MODEL_ID: str = "amazon.nova-sonic-v1:0"
 
     # CORS
     CORS_ORIGINS: list[str] | str = ["http://localhost:3000"]

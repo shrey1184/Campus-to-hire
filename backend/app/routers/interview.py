@@ -1,4 +1,5 @@
 import json
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -16,6 +17,8 @@ from app.services.prompts import (
 )
 
 router = APIRouter(prefix="/api/interview", tags=["interview"])
+
+logger = logging.getLogger(__name__)
 
 LANGUAGE_NAMES = {
     "en": "English",
@@ -59,7 +62,20 @@ def _evaluate_interview(interview: Interview) -> tuple[int | None, str | None]:
     )
 
     try:
-        data = json.loads(raw)
+        cleaned_raw = raw.strip()
+        if cleaned_raw.startswith("```"):
+            cleaned_raw = cleaned_raw.removeprefix("```json").removeprefix("```")
+            if cleaned_raw.endswith("```"):
+                cleaned_raw = cleaned_raw[:-3]
+            cleaned_raw = cleaned_raw.strip()
+
+        if not cleaned_raw.startswith("{"):
+            json_start = cleaned_raw.find("{")
+            json_end = cleaned_raw.rfind("}")
+            if json_start != -1 and json_end != -1 and json_end > json_start:
+                cleaned_raw = cleaned_raw[json_start : json_end + 1]
+
+        data = json.loads(cleaned_raw)
 
         # Compute score from sub-scores when available (weighted average).
         tech = data.get("technical_score")
@@ -82,7 +98,13 @@ def _evaluate_interview(interview: Interview) -> tuple[int | None, str | None]:
 
         # Store the full evaluation JSON so the frontend can render it.
         feedback = json.dumps(data)
-    except (ValueError, TypeError, json.JSONDecodeError, AttributeError):
+    except (ValueError, TypeError, json.JSONDecodeError, AttributeError) as exc:
+        logger.warning(
+            "Interview evaluation parsing failed for interview %s: %s; raw preview=%r",
+            getattr(interview, "id", None),
+            exc,
+            raw[:500],
+        )
         score = None
         feedback = raw
 
@@ -102,19 +124,28 @@ def start_interview(
     db: Session = Depends(get_db),
 ) -> InterviewResponse:
     """Start a new mock interview session and return the first question."""
-    system_prompt = _build_interview_system_prompt(current_user.preferred_language)
-    first_question = bedrock_service.invoke_model(
-        system_prompt,
-        get_interview_start_prompt(body.role, body.company),
-        fallback_type="interview",
-    )
-
-    interview = Interview(
-        user_id=current_user.id,
-        role=body.role,
-        company=body.company,
-        messages=[{"role": "assistant", "content": first_question}],
-    )
+    if body.voice_mode:
+        # Voice mode: create interview record without generating first question
+        # The WebSocket handler will initiate the voice greeting
+        interview = Interview(
+            user_id=current_user.id,
+            role=body.role,
+            company=body.company,
+            messages=[],
+        )
+    else:
+        system_prompt = _build_interview_system_prompt(current_user.preferred_language)
+        first_question = bedrock_service.invoke_model(
+            system_prompt,
+            get_interview_start_prompt(body.role, body.company),
+            fallback_type="interview",
+        )
+        interview = Interview(
+            user_id=current_user.id,
+            role=body.role,
+            company=body.company,
+            messages=[{"role": "assistant", "content": first_question}],
+        )
     setattr(interview, "preferred_language", current_user.preferred_language)
     db.add(interview)
     db.commit()
