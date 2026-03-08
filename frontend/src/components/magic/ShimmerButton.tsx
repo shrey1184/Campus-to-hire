@@ -30,13 +30,15 @@ export function ShimmerButton({
       disabled={disabled}
       className={cn(
         "relative overflow-hidden",
-        "px-6 py-3 rounded-lg",
-        "font-medium text-sm tracking-wide p-0 m-0 leading-none",
+        "inline-flex items-center justify-center gap-2",
+        "px-6 py-2.5 rounded-xl",
+        "font-semibold text-sm tracking-wide",
         "bg-[var(--accent)] text-[var(--text-inverse)]",
-        "border border-[var(--accent)]",
+        "border border-[var(--accent)]/80",
         "shadow-[0_0_20px_var(--accent-glow)]",
+        "hover:brightness-110",
         "disabled:opacity-50 disabled:cursor-not-allowed",
-        "transition-colors duration-150",
+        "transition-all duration-200",
         className
       )}
       whileHover={shouldReduceMotion ? {} : { scale: disabled ? 1 : 1.02 }}
