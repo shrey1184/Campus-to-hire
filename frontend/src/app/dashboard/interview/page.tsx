@@ -4,6 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
 import { interviewApi } from "@/lib/api";
+import {
+  isVoiceInputSupported,
+  speakInterviewText,
+  startVoiceInput,
+  stopVoicePlayback,
+  type VoiceRecorderController,
+} from "@/lib/interview-voice";
 import { fireConfetti } from "@/lib/confetti";
 import { useLanguage } from "@/lib/language-context";
 import type { Interview, ChatMessage, InterviewEvaluation } from "@/types";
@@ -21,6 +28,8 @@ import {
   ExternalLink,
   Loader2,
   MessageSquare,
+  Mic,
+  MicOff,
   Play,
   Send,
   Star,
@@ -28,6 +37,8 @@ import {
   Target,
   Trophy,
   User,
+  Volume2,
+  VolumeX,
   Zap,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -98,7 +109,7 @@ function ScoreRing({ value, max = 10, label, color }: { value: number; max?: num
 
 // ── Rich evaluation card ─────────────────────────────────────────────────────
 
-function InterviewEvaluationCard({ interview, t }: { interview: Interview; t: (key: string, vars?: Record<string, unknown>) => string }) {
+function InterviewEvaluationCard({ interview, t }: { interview: Interview; t: (key: string, vars?: Record<string, string | number>) => string }) {
   const evaluation = parseEvaluation(interview.feedback);
   const displayScore = computeDisplayScore(interview);
 
@@ -302,8 +313,13 @@ export default function InterviewPage() {
   const [selectedCompany, setSelectedCompany] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
   const [error, setError] = useState("");
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const celebratedInterviewRef = useRef<string | null>(null);
+  const recorderRef = useRef<VoiceRecorderController | null>(null);
+  const lastSpokenAssistantIndexRef = useRef<number>(-1);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -321,6 +337,39 @@ export default function InterviewPage() {
       celebratedInterviewRef.current = interview.id;
     }
   }, [interview]);
+
+  useEffect(() => {
+    if (!voiceMode || !interview?.messages?.length) return;
+
+    const assistantIndexes = interview.messages
+      .map((m, i) => (m.role === "assistant" ? i : -1))
+      .filter((i) => i >= 0);
+
+    if (!assistantIndexes.length) return;
+
+    const latestAssistantIndex = assistantIndexes[assistantIndexes.length - 1];
+    if (latestAssistantIndex <= lastSpokenAssistantIndexRef.current) return;
+
+    const latestMessage = interview.messages[latestAssistantIndex];
+    if (!latestMessage?.content?.trim()) return;
+
+    lastSpokenAssistantIndexRef.current = latestAssistantIndex;
+    setSpeaking(true);
+    void speakInterviewText(latestMessage.content, user?.preferred_language)
+      .catch(() => {
+        // Keep interview flow resilient even if voice playback fails.
+      })
+      .finally(() => {
+        setSpeaking(false);
+      });
+  }, [interview?.messages, user?.preferred_language, voiceMode]);
+
+  useEffect(() => {
+    return () => {
+      recorderRef.current?.stop();
+      stopVoicePlayback();
+    };
+  }, []);
 
   async function handleStart() {
     setStarting(true);
@@ -365,9 +414,57 @@ export default function InterviewPage() {
   }
 
   function handleNewInterview() {
+    recorderRef.current?.stop();
+    recorderRef.current = null;
+    setListening(false);
+    setSpeaking(false);
+    stopVoicePlayback();
+    lastSpokenAssistantIndexRef.current = -1;
     setInterview(null);
     setMessage("");
     setError("");
+  }
+
+  function handleVoiceToggle() {
+    if (voiceMode) {
+      recorderRef.current?.stop();
+      recorderRef.current = null;
+      setListening(false);
+      setSpeaking(false);
+      stopVoicePlayback();
+      setVoiceMode(false);
+      return;
+    }
+    setVoiceMode(true);
+  }
+
+  function handleMicClick() {
+    if (!voiceMode) return;
+
+    if (listening) {
+      recorderRef.current?.stop();
+      recorderRef.current = null;
+      setListening(false);
+      return;
+    }
+
+    const controller = startVoiceInput(
+      user?.preferred_language,
+      (transcript) => {
+        setMessage((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      },
+      () => {
+        setError("Voice input failed. Please try again.");
+      },
+      () => {
+        setListening(false);
+      },
+    );
+
+    if (controller) {
+      recorderRef.current = controller;
+      setListening(true);
+    }
   }
 
   const isFinished =
@@ -436,6 +533,23 @@ export default function InterviewPage() {
               </div>
             </BlurFade>
 
+            <BlurFade delay={0.25}>
+              <button
+                type="button"
+                onClick={handleVoiceToggle}
+                className={`w-full rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
+                  voiceMode
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                }`}
+              >
+                <span className="inline-flex items-center gap-2">
+                  {voiceMode ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                  {voiceMode ? "Voice mode enabled" : "Enable voice mode (Polly + browser mic)"}
+                </span>
+              </button>
+            </BlurFade>
+
             <ShimmerButton onClick={handleStart} disabled={starting} className="w-full">
               {starting ? (
                 <Loader2 className="h-4 w-4 animate-spin spinner-glow" />
@@ -486,6 +600,16 @@ export default function InterviewPage() {
           )}
         </div>
         <div className="flex gap-2 self-start sm:self-auto">
+          {voiceMode ? (
+            <button
+              type="button"
+              onClick={handleVoiceToggle}
+              className="btn-outline flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium"
+            >
+              {speaking ? <Volume2 className="h-3 w-3" /> : <VolumeX className="h-3 w-3" />}
+              {speaking ? "Voice On" : "Voice"}
+            </button>
+          ) : null}
           {!isFinished ? (
             <button
               onClick={handleEnd}
@@ -571,6 +695,18 @@ export default function InterviewPage() {
           transition={{ duration: 0.2 }}
           style={{ borderRadius: "1rem", paddingInline: "0.25rem" }}
         >
+          {voiceMode && isVoiceInputSupported() ? (
+            <button
+              type="button"
+              onClick={handleMicClick}
+              className={`btn-outline flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium ${
+                listening ? "border-primary text-primary" : ""
+              }`}
+              title={listening ? "Stop voice input" : "Start voice input"}
+            >
+              {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </button>
+          ) : null}
           <input
             type="text"
             value={message}

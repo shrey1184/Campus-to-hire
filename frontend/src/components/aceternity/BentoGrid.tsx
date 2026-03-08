@@ -95,7 +95,7 @@ export const BentoGridItem = ({
           className="absolute inset-0 rounded-xl"
           style={{
             background:
-              "radial-gradient(600px circle at 50% 50%, rgba(201, 168, 76, 0.06), transparent 40%)",
+              "radial-gradient(600px circle at 50% 50%, var(--accent-subtle), transparent 40%)",
           }}
         />
       </div>
@@ -139,7 +139,7 @@ export const BentoGridItem = ({
         animate={shouldReduceMotion ? {} : { rotate: 0 }}
         style={{
           background:
-            "linear-gradient(135deg, transparent 50%, rgba(201, 168, 76, 0.1) 50%)",
+            "linear-gradient(135deg, transparent 50%, var(--accent-subtle) 50%)",
         }}
       />
     </motion.div>
@@ -264,7 +264,7 @@ export const BentoCard = ({
           className="absolute inset-0"
           style={{
             background:
-              "radial-gradient(400px circle at 50% 100%, rgba(201, 168, 76, 0.1), transparent 50%)",
+              "radial-gradient(400px circle at 50% 100%, var(--accent-subtle), transparent 50%)",
           }}
         />
       </div>

@@ -21,7 +21,7 @@ interface SpotlightProps {
  */
 export const Spotlight = ({
   className,
-  fill = "rgba(201, 168, 76, 0.15)",
+  fill = "var(--accent-subtle)",
   size = 600,
 }: SpotlightProps) => {
   const mouseX = useMotionValue(0);

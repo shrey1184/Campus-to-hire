@@ -14,13 +14,16 @@ interface AnimatedGradientTextProps {
 export function AnimatedGradientText({
   children,
   className = "",
-  colors = ["#c9a84c", "#e8d5a3", "#d4b85c", "#c9a84c"],
+  colors,
   speed = 3,
 }: AnimatedGradientTextProps) {
   const shouldReduceMotion = useReducedMotion();
 
+  // Use accent variable as default — resolved at render time
+  const resolvedColors = colors ?? ["var(--accent)", "var(--accent-hover)", "var(--accent)", "var(--accent-hover)"];
+
   // Create gradient string from colors
-  const gradient = `linear-gradient(90deg, ${colors.join(", ")})`;
+  const gradient = `linear-gradient(90deg, ${resolvedColors.join(", ")})`;
 
   if (shouldReduceMotion) {
     return (
@@ -73,7 +76,7 @@ export function ShimmerText({ children, className = "" }: ShimmerTextProps) {
     <span
       className={cn(
         "relative inline-block",
-        "bg-gradient-to-r from-[var(--accent)] via-[#f0e4c0] to-[var(--accent)]",
+        "bg-gradient-to-r from-[var(--accent)] via-[var(--accent-hover)] to-[var(--accent)]",
         "bg-clip-text text-transparent",
         className
       )}

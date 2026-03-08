@@ -49,7 +49,7 @@ export function AuroraBackground({
           <div
             className="absolute -inset-[100px] opacity-30"
             style={{
-              background: `radial-gradient(circle at 50% 50%, rgba(201, 168, 76, 0.3), transparent 50%)`,
+              background: `radial-gradient(circle at 50% 50%, var(--accent-blob), transparent 50%)`,
               filter: `blur(${config.blur})`,
             }}
           />
@@ -76,7 +76,7 @@ export function AuroraBackground({
           className="absolute -right-[20%] -top-[20%] h-[60%] w-[60%] rounded-full"
           style={{
             background:
-              "radial-gradient(circle, rgba(201, 168, 76, 0.4) 0%, rgba(201, 168, 76, 0.1) 40%, transparent 70%)",
+              "radial-gradient(circle, var(--accent-blob) 0%, var(--accent-glow) 40%, transparent 70%)",
             filter: `blur(${config.blur})`,
           }}
           animate={{
@@ -96,7 +96,7 @@ export function AuroraBackground({
           className="absolute -bottom-[20%] -left-[20%] h-[60%] w-[60%] rounded-full"
           style={{
             background:
-              "radial-gradient(circle, rgba(201, 168, 76, 0.3) 0%, rgba(212, 184, 92, 0.1) 40%, transparent 70%)",
+              "radial-gradient(circle, var(--accent-glow) 0%, var(--accent-subtle) 40%, transparent 70%)",
             filter: `blur(${config.blur})`,
           }}
           animate={{
@@ -117,7 +117,7 @@ export function AuroraBackground({
           className="absolute left-[30%] top-[40%] h-[40%] w-[40%] rounded-full"
           style={{
             background:
-              "radial-gradient(circle, rgba(201, 168, 76, 0.2) 0%, transparent 60%)",
+              "radial-gradient(circle, var(--accent-subtle) 0%, transparent 60%)",
             filter: `blur(${config.blur})`,
           }}
           animate={{
@@ -138,7 +138,7 @@ export function AuroraBackground({
           className="absolute left-[20%] top-[20%] h-[50%] w-[50%] rounded-full"
           style={{
             background:
-              "radial-gradient(circle, rgba(232, 213, 163, 0.15) 0%, transparent 50%)",
+              "radial-gradient(circle, var(--accent-glow) 0%, transparent 50%)",
             filter: `blur(${config.blur})`,
           }}
           animate={{

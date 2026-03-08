@@ -22,7 +22,7 @@ export function GlowingOrb({
   className,
   size = 400,
   color = "var(--accent)",
-  secondaryColor = "#e8d5a3",
+  secondaryColor = "var(--accent-hover)",
   blur = 100,
   pulseDuration = 4,
   floatDuration = 8,
@@ -114,8 +114,8 @@ export function OrbCluster({ className, orbCount = 3 }: OrbClusterProps) {
 
   const orbs = [
     { size: 500, color: "var(--accent)", opacity: 0.3, x: "-20%", y: "20%" },
-    { size: 350, color: "#c9a84c", opacity: 0.25, x: "60%", y: "-10%" },
-    { size: 280, color: "#e8d5a3", opacity: 0.2, x: "30%", y: "50%" },
+    { size: 350, color: "var(--accent-hover)", opacity: 0.25, x: "60%", y: "-10%" },
+    { size: 280, color: "var(--accent)", opacity: 0.2, x: "30%", y: "50%" },
   ];
 
   return (

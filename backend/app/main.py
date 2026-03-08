@@ -15,6 +15,7 @@ from app.routers import (
     roadmap,
     daily_plan,
     interview,
+    interview_voice,
     jd,
     translate,
     progress,
@@ -65,6 +66,7 @@ app.include_router(profile.router)
 app.include_router(roadmap.router)
 app.include_router(daily_plan.router)
 app.include_router(interview.router)
+app.include_router(interview_voice.router)
 app.include_router(jd.router)
 app.include_router(translate.router)
 app.include_router(progress.router)

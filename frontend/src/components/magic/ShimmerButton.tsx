@@ -31,7 +31,7 @@ export function ShimmerButton({
       className={cn(
         "relative overflow-hidden",
         "px-6 py-3 rounded-lg",
-        "font-semibold text-sm tracking-wide",
+        "font-medium text-sm tracking-wide p-0 m-0 leading-none",
         "bg-[var(--accent)] text-[var(--text-inverse)]",
         "border border-[var(--accent)]",
         "shadow-[0_0_20px_var(--accent-glow)]",
